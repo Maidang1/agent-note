@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>手写 GPT 本机实验 · UI 全域合并评审</title>
+<style>
+  body{font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;line-height:1.7;color:#24323e;max-width:960px;margin:0 auto;padding:32px 20px;background:#fff}
+  h1{font-size:1.5rem}h2{font-size:1.15rem;margin-top:2rem;border-bottom:1px solid #dfe6eb;padding-bottom:.3rem}
+  h3{font-size:1rem;margin-top:1.4rem}
+  table{border-collapse:collapse;width:100%;font-size:.86rem;margin:.8rem 0}
+  th,td{border:1px solid #dfe6eb;padding:6px 9px;text-align:left;vertical-align:top}
+  th{background:#f6f8fa}
+  .hi{color:#b42318;font-weight:700}.med{color:#a05c08;font-weight:700}.lo{color:#64748b;font-weight:700}.imp{color:#0f766e;font-weight:700}
+  code{background:#edf7f5;padding:1px 5px;border-radius:4px;font-family:ui-monospace,Menlo,monospace;font-size:.85em}
+  .pass{color:#0f766e;font-weight:700}.nv{color:#94a3b8;font-weight:700}
+  .verdict{font-size:1.2rem;font-weight:800;padding:12px 16px;border-radius:8px;margin-top:1rem;background:#edf7f5;color:#0f766e;border:1px solid #0f766e}
+  ul{margin:.4rem 0}.small{font-size:.84rem;color:#64748b}
+</style>
+</head>
+<body>
+<h1>手写 GPT · 本机实验 — UI 全域合并评审</h1>
+
+<h2>范围与边界</h2>
+<p>模式 <b>full</b>（六域：Accessibility / Layout / Writing / Typography / Colors / UI），发现上限 15。范围 = Astro 课文页、零基础导读、侧栏目录、base.css，以及两个 TSX 呈现层（PythonRunner / PythonCodeEditor）。</p>
+<p class="small"><b>例外声明：</b>本次唯一被授权改动的运行逻辑是 <code>PythonRunner.tsx</code> 的 <code>stop()</code> 请求方法（按后端契约由 GET 改为 POST + JSON 头/体），属缺陷修复。其余运行逻辑（run / reset / showSolution / API 轮询 / 值 effect）、后端 <code>runner_server.py</code>、runtime 与全部 32 课内容保持不变，已由独立保护核验 32/32 锁定，后端 hash 复核与评审前一致。</p>
+
+<h2>一、六域覆盖</h2>
+<table>
+<tr><th>域</th><th>已检视证据</th><th>结果</th></tr>
+<tr><td>Accessibility</td><td>键盘 Tab/Esc、焦点环、ARIA（role=status/alert、aria-busy、landmark、跳到正文）、编辑器键盘退出、各控件可命名性</td><td><span class="pass">通过（Esc 退出、跳到正文已修）</span></td></tr>
+<tr><td>Layout</td><td>1440 三栏 / 320 堆叠断点、7 组渐进折叠、正文 72ch、运行器面板、200% 缩放、真实宽/窄屏无横向溢出</td><td><span class="pass">通过</span></td></tr>
+<tr><td>Writing</td><td>按钮动宾、空态指引、错误/超时/手动停止提示文案、来源折叠标题</td><td><span class="pass">通过</span></td></tr>
+<tr><td>Typography</td><td>h2/h3/h4 层级、正文 16px/1.8、text-wrap、代码 13–14px、行宽节奏</td><td><span class="pass">通过</span></td></tr>
+<tr><td>Colors</td><td>真浏览器 computed 前后台 WCAG（normal 4.5 / non-text 3，disabled 除外）</td><td><span class="pass">通过（灰字/accent 已加深达标）</span></td></tr>
+<tr><td>UI</td><td>合并工具行、来源 details 折叠、按钮 34px、焦点环、块卡片减重、空/成功/错误/停止各态</td><td><span class="pass">通过（停止请求已按契约修复）</span></td></tr>
+</table>
+
+<h2>二、审查发现（根因合并，按 Severity 排序）</h2>
+<table>
+<tr><th>#</th><th>Severity</th><th>Domain</th><th>Location</th><th>Before</th><th>After</th><th>Why</th></tr>
+<tr>
+<td>1</td><td class="hi">HIGH</td><td>Accessibility</td>
+<td><code>astro/src/components/PythonCodeEditor.tsx:24-27</code></td>
+<td><code>run:(view)=&gt;{view.dom.blur();return true;}</code>（blur 外层 .cm-editor，从未持焦）</td>
+<td><code>view.contentDOM.blur()</code></td>
+<td>真实点击进编辑器后焦点在 <code>.cm-content</code>，旧代码 Esc 不 blur，键盘用户被 Tab=缩进困在编辑器内、到不了运行按钮。</td>
+</tr>
+<tr>
+<td>2</td><td class="hi">HIGH</td><td>UI</td>
+<td><code>astro/src/components/PythonRunner.tsx:53</code> <code>stop()</code></td>
+<td><code>fetch(`${api}/stop`)</code>（默认 GET）</td>
+<td><code>fetch(`${api}/stop`,{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'})</code></td>
+<td>不可变后端 <code>do_POST:256-259</code> 要求同源 POST + JSON 头；旧请求先 405（GET）、补 POST 后仍 415（缺头），停止按钮恒失效，长跑/死循环无法中断。</td>
+</tr>
+<tr>
+<td>3</td><td class="med">MEDIUM</td><td>Accessibility</td>
+<td><code>astro/src/layouts/Layout.astro:23</code> + <code>astro/src/pages/[...slug].astro</code> main</td>
+<td>DOM 顺序：目录 → main，无跳到正文链接</td>
+<td>首项 sr-only「跳到正文」链接 <code>href=#main-content</code>；<code>&lt;main id="main-content" tabindex="-1"&gt;</code></td>
+<td>重复导航先于正文，键盘/读屏用户须先过约 17 个停靠点才到学习区。</td>
+</tr>
+<tr>
+<td>4</td><td class="lo">LOW</td><td>Colors</td>
+<td><code>astro/src/styles/base.css:15</code>（token）→ <code>:194 .sidebar-group-range</code>、<code>:404 .runner-editor-meta span</code>、<code>.cm-gutters</code></td>
+<td><code>#64748b</code>/<code>#94a3b8</code>：软底 4.47:1、白上区间 2.56:1</td>
+<td>统一为 <code>--reader-muted:#475569</code></td>
+<td>12px 行号/区间/meta 为正常文字，旧色低于 4.5；实测修复后 7.12（软底）、7.58（白）。</td>
+</tr>
+<tr>
+<td>5</td><td class="lo">LOW</td><td>Colors</td>
+<td><code>astro/src/styles/base.css:9</code> <code>--tk-accent</code>（guide 链接/小标题）</td>
+<td><code>#0d9488</code> 白上 3.74:1</td>
+<td>统一为 <code>#0f766e</code></td>
+<td>导读页链接/小标题为 16–17px 正常文字，3.74 不达 4.5；修复后 5.14（软底）/5.47（白）。</td>
+</tr>
+</table>
+
+<h3>本次授权 UI 改版根因（非缺陷，实现变更）</h3>
+<table>
+<tr><th>Domain</th><th>Location</th><th>Before</th><th>After</th><th>Why</th></tr>
+<tr><td>Layout/Nav</td><td><code>CourseSidebar.astro:44-51</code>、<code>:15-22</code></td><td>32 课扁平全展开</td><td>按 slug 分 7 组原生 details，仅当前组 open，其余折叠但链接留 DOM</td><td>渐进折叠：当前课可见、32 课仍可达不丢。</td></tr>
+<tr><td>Layout</td><td><code>base.css:101-112</code></td><td>断点 1100，侧栏 15rem，运行器 46%</td><td>断点 1280，侧栏 14rem，运行器 44%</td><td>1100 时正文列过窄；并读只在真宽屏触发。</td></tr>
+<tr><td>Layout</td><td><code>base.css:87-90</code></td><td>窄屏侧栏 max-height 10rem</td><td>16rem</td><td>窄屏一屏见当前组 + 入口，快速找目录。</td></tr>
+<tr><td>UI</td><td><code>base.css:362-382</code></td><td>课程来源常驻条</td><td><code>&lt;details&gt;</code> 折叠「课程来源（点击展开）」</td><td>来源默认折叠减重，需要时展开。</td></tr>
+<tr><td>UI</td><td><code>base.css:392-405</code></td><td>独立灰底工具条 + 文件行两条 chrome</td><td>合并为一条 muted-surface 控制带（meta + 按钮组）</td><td>垂直 chrome 减重，控件仍与正文区分。</td></tr>
+<tr><td>UI</td><td><code>base.css:394-395</code></td><td>按钮 min-height 38px</td><td>34px</td><td>紧凑但 ≥24px 可点目标。</td></tr>
+<tr><td>UI</td><td><code>base.css:76-79</code></td><td>仅 a/runner-button 焦点环</td><td>a/button/summary 统一 2px accent 焦点环</td><td>新 summary 控件键盘焦点可见。</td></tr>
+<tr><td>Typography</td><td><code>base.css:214-233</code></td><td>h2 1.6rem、h3 1.15rem 青绿+机械顶边、无 h4</td><td>h2 1.4rem/balance、h3 1.02rem 去顶边、新增 h4 0.95rem</td><td>去重复分隔线、补 h4 层级缺口。</td></tr>
+<tr><td>Typography</td><td><code>base.css:204,210</code></td><td>行高 1.95、行宽 74ch</td><td>行高 1.8、行宽 72ch</td><td>篇幅节奏更紧，行宽仍在 60–75ch。</td></tr>
+</table>
+
+<h2>三、考虑但拒绝（真实候选）</h2>
+<table>
+<tr><th>Location</th><th>候选</th><th>拒绝原因</th></tr>
+<tr><td><code>base.css .dark</code></td><td>补暗色模式切换</td><td>定位浅色教学工具，未承诺暗色；dark 变量未被切换，无害预留。</td></tr>
+<tr><td><code>.runner-button</code></td><td>加 active:scale(.96) 按压反馈</td><td>无动效库且动效克制；已有 hover + 2px 焦点环，收益低。</td></tr>
+<tr><td>侧栏窄屏</td><td>加汉堡/JS 抽屉</td><td>7 组折叠 + 16rem 紧凑条已够找目录，未到必须新增 JS。</td></tr>
+<tr><td><code>.runner-output-meta</code></td><td>耗时/退出码加 tabular-nums</td><td>数字抖动影响极小，meta 为辅助信息。</td></tr>
+</table>
+
+<h2>四、核验（确切检查 + 观察）</h2>
+<table>
+<tr><th>检查</th><th>方式</th><th>结果</th></tr>
+<tr><td>类型检查</td><td><code>npx astro check</code></td><td class="pass">13 文件 0 errors / 0 warnings / 0 hints</td></tr>
+<tr><td>课程/运行逻辑不变</td><td>复用独立保护核验 + hash 复核</td><td class="pass">32/32 通过，code/debug/solution/refs/statements/runtime 0 mismatch；后端 hash 与评审前一致（唯一例外为 stop 请求契约修复）</td></tr>
+<tr><td>侧栏目录</td><td>真页面 DOM 计数</td><td class="pass">7 组、当前组 open 其余折叠、33 链接=导读+32 课、顺序正确</td></tr>
+<tr><td>运行器空/成功/错误态</td><td>真浏览器点击运行</td><td class="pass">空态指引；成功 2472ms 退出码 0、stdout 与课程一致；注入 1/0 → 运行未成功、红色 stderr Traceback、可恢复提示、退出码 1</td></tr>
+<tr><td>显示答案/重置</td><td>按钮点击</td><td class="pass">切换并恢复初始代码</td></tr>
+<tr><td>手动停止(-9)</td><td>注入 time.sleep(30) 后点停止</td><td class="pass">已手动停止 / 耗时 1548ms / 退出码 -9，中性灰状态 + 可恢复提示；reset 回默认无临时代码</td></tr>
+<tr><td>对比度</td><td>computed 真实背景 WCAG</td><td class="pass">正文/标题/链接/主按钮/当前项 5.5–13；muted/gutter 7.12、区间 7.58、accent 5.14–5.47，均 ≥4.5</td></tr>
+<tr><td>键盘 Esc+Tab / 跳到正文</td><td>真实点击+按键</td><td class="pass">Esc 落 body、Tab 可离开；Tab 落到「跳到正文」、回车到 main</td></tr>
+<tr><td>200% 缩放</td><td>body zoom=2</td><td class="pass">scrollWidth==clientWidth，无横向溢出</td></tr>
+<tr><td>真实宽屏 1440</td><td>独立 headless Chrome 真实 viewport</td><td class="pass">三栏并排，runner 634 / article 518，gutter 1–16、4 按钮齐全，无横向溢出</td></tr>
+<tr><td>真实窄屏 320</td><td>独立 headless Chrome 真实 viewport</td><td class="pass">纵向堆叠无裁切、无横向溢出；运行器区 top160/left0/w320/h640 全在视口，4 钮同排末缘 304&lt;320，gutter 52px 行号 1–7，输出「尚未运行」</td></tr>
+<tr><td>屏幕阅读器 / 触屏真实点击</td><td>—</td><td class="nv">未执行（无读屏设备/未做真实触屏按压）；键盘路径、焦点与 viewport 布局已实测，不等同读屏朗读或触屏命中实测</td></tr>
+</table>
+
+<div class="verdict">结论：Approve（限定 scope）。5 个审查发现（2 HIGH / 1 MEDIUM / 2 LOW）已全部修复并真实浏览器实测通过；1440 三栏与 320 堆叠真实渲染均无横向溢出、讲解/代码/输出/控件可用。限定：屏幕阅读器朗读与真实触屏命中未在本机实测；覆盖本次授权 UI 范围（唯一逻辑例外为 stop 请求契约修复），课程内容与后端运行时由独立保护核验 32/32 锁定。</div>
+
+<p class="small">随附：第3课对照图、运行器空/成功/错误/停止态截图、guide 页、1440 三栏、320 堆叠与 320 运行区真实截图。所有发现可定位 path:line；未实测项已标 Not verified，未据此推断通过。</p>
+</body>
+</html>

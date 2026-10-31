@@ -1,0 +1,12 @@
+# 21 Block 的构造：头宽必须整除，并接两个 LayerNorm (default)  exit=0 3743ms PASS=True
+--- stdout ---
+n_embd = 32  n_head = 4  head_size = n_embd // n_head = 8
+可整除?  True
+ln1 后每个 token 最后一维的均值 ≈ [0.0, -0.0, 0.0, -0.0, 0.0]
+ln1 后每个 token 最后一维的标准差 ≈ [0.999996, 0.999996, 0.999995, 0.999995, 0.999995]
+Block 子模块: sa= MultiHeadAttention  ffwd= FeedFoward  ln1= LayerNorm
+若 n_embd=30, n_head=4, head_size = 7  拼起来 = 28  != 30
+OK
+
+--- stderr ---
+

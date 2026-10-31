@@ -1,0 +1,133 @@
+{
+  "id": "04",
+  "order": 4,
+  "module": "数据与Bigram",
+  "title": "把整数列表变成张量，并切出训练/验证两段",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 31,
+      "end": 34,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L31-L34"
+    },
+    {
+      "file": "gpt.py",
+      "start": 35,
+      "end": 38,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L35-L38"
+    }
+  ],
+  "goal": "理解data为什么是dtype=long的一维张量，以及前90%训练、后10%验证的切分。",
+  "prerequisites": [
+    "03"
+  ],
+  "explanation": [
+    "上一课encode出的是普通Python整数列表，辅助工具load_original在内部已经用torch.tensor把它打包成一维长整数张量data，并按前90%/后10%切成train_data和val_data两段放进ns。右侧不重新打包或切分，只是把data和这两段取出来，看看类型、长度比例，并在边界处解码文字确认没切错。",
+    "data是一长条数字（长度=语料字符总数，约111万），dtype必须是long，因为后面要拿这些整数当Embedding查表的下标，下标不能带小数。右侧第8行会自己算一个切分点n=int(0.9*len(data))，用来和辅助工具准备好的train_data/val_data长度对照；再打印两段边界各10个字，亲眼看到训练段结尾后面紧跟着验证段开头。",
+    "前90%是模型学习用的训练集，后10%故意不让它学、只用来考试的验证集。两段首尾相接。下一课get_batch会从这两段里随机剪小段。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "让辅助工具把整数列表打包成一维张量",
+      "explanation": "第1行引入load_original辅助加载工具，第2行选bigram得到ns这个收纳盒。第3行取出torch工具，第4行取出data。data其实是辅助工具在内部用torch.tensor(encode(text), dtype=torch.long)打包好的一整条数字，右侧并没有重新写torch.tensor；train_data和val_data也已经在内部按90/10切好放进ns了。"
+    },
+    {
+      "start": 5,
+      "end": 7,
+      "title": "看看data是什么样的数字表",
+      "explanation": "第5行显示data的类型Tensor。第6行显示dtype为torch.long（即int64），等下要拿这些整数当Embedding查表的下标，下标必须是整数，不能带小数。第7行numel()数data里一共有多少个数字，它等于整份语料的字符总数（约111万），和vocab_size（字符种类65）是两个完全不同的数。data是一维的，一长条没有行列。"
+    },
+    {
+      "start": 8,
+      "end": 11,
+      "title": "自己算切分点，对照辅助准备好的两段长度",
+      "explanation": "第8行右侧自己算一个切分点n=int(0.9*len(data))：int去掉小数，因为切片下标必须是整数。第9行打印n。第10行从ns取出辅助工具已经切好的train_data和val_data，打印它们各自的长度；第11行再算两段占总长的比例，应约为0.9:0.1。注意真正的切片操作发生在辅助工具内部，右侧这里只是用n来核对两段长度对不对。"
+    },
+    {
+      "start": 12,
+      "end": 13,
+      "title": "解码两段边界，确认切分没有错位",
+      "explanation": "第12行取train_data最后10个编号、用decode还原成文字，第13行取val_data最前10个编号、decode成文字。train_data的最后一个字符后面正好就是val_data的第一个字符，所以两段边界文字应该首尾相接、读起来连贯。这里[-10:]是取末尾10个，[:10]是取开头10个。"
+    },
+    {
+      "start": 14,
+      "end": 17,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第14行检查data确实是long类型，第15行检查训练段长度等于切分点n，第16行检查验证段长度等于总长减n，第17行检查data确实是一维。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 31,
+      "end": 31,
+      "explanation": "torch.tensor把encode(text)的整数列表转成一维张量，dtype=long表示整数；后面Embedding要用它当下标。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 32,
+      "end": 32,
+      "explanation": "int(0.9*len(data))算出整数切分点：前90%训练，剩下10%验证；int去掉小数，切片下标必须是整数。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 33,
+      "end": 33,
+      "explanation": "train_data是data从开头到n的切片。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 34,
+      "end": 34,
+      "explanation": "val_data是data从n到末尾的切片，与训练段首尾相接。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 35,
+      "end": 38,
+      "explanation": "GPT同样的打包和90/10切分，两段数据两模型共用。"
+    }
+  ],
+  "input": "观察train/val长度比例；可临时把0.9改成0.8理解切分点变化（本步不改源码，只打印对照）。",
+  "expected": "打印data的类型/dtype/长度，切分点n，train与val长度，以及两段边界处解码出的真实文字；dtype断言为long。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\ndata = ns['data']\nprint('data 类型:', type(data).__name__)\nprint('data dtype:', data.dtype, '(long/int64 才能做 Embedding 的下标)')\nprint('data 元素总数:', data.numel(), '= 语料字符总数', len(ns['text']))\nn = int(0.9 * len(data))\nprint('切分点 n =', n, '(前90%为训练段)')\nprint('train_data 长度:', len(ns['train_data']), ' val_data 长度:', len(ns['val_data']))\nprint('两段比例 train:val =', round(len(ns['train_data'])/len(data), 3), ':', round(len(ns['val_data'])/len(data), 3))\nprint('训练段结尾10字:', repr(ns['decode'](ns['train_data'][-10:].tolist())))\nprint('验证段开头10字:', repr(ns['decode'](ns['val_data'][:10].tolist())))\nassert data.dtype == torch.long\nassert len(ns['train_data']) == n\nassert len(ns['val_data']) == len(data) - n\nassert data.dim() == 1\n",
+  "exercise": {
+    "instruction": "手动算一遍：如果语料总长1115394，90%切分点n是多少，验证段有多少字符？运行时打印的数字是否吻合？",
+    "hint": "n=int(0.9*1115394)，val=总长-n。",
+    "solution": "n=1003854，val_data=111540；打印值应与此一致。"
+  },
+  "debug": {
+    "instruction": "忘了int()，用浮点数当切片下标，观察Python对切片类型的要求。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ndata = ns['data']\nn_bad = 0.9 * len(data)\nprint('n_bad =', n_bad, type(n_bad).__name__)\ntrain = data[:n_bad]\n",
+    "expectedError": "TypeError",
+    "fix": "切片下标必须是整数；把0.9*len(data)包一层int()，和原版第32行一样。"
+  },
+  "modifications": [
+    {
+      "original": "原切分比例固定90/10",
+      "teaching": "本步只打印真实切分结果，不改比例",
+      "reason": "保持与原版一致的训练/验证定义。"
+    }
+  ],
+  "checkpoints": [
+    "data是一维long张量",
+    "train/val长度之和等于总长",
+    "两段边界解码首尾相接"
+  ],
+  "glossary": [
+    {
+      "term": "dtype",
+      "explanation": "张量里数字的种类；long=64位整数，适合当下标。"
+    },
+    {
+      "term": "训练集",
+      "explanation": "模型从中学习的那部分数据（前90%）。"
+    },
+    {
+      "term": "验证集",
+      "explanation": "不参与学习、只用来检验成绩的那部分数据（后10%）。"
+    }
+  ]
+}

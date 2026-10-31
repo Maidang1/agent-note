@@ -1,0 +1,16 @@
+# 32 扩展对比：Bigram 与 GPT 参数量，以及独立的权重存档与读取（非原版） (debug)  exit=1 4849ms PASS=True
+--- stdout ---
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+    bi.load_state_dict(gpt.state_dict())
+    ~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 2647, in load_state_dict
+    raise RuntimeError(
+    ...<3 lines>...
+    )
+RuntimeError: Error(s) in loading state_dict for BigramLanguageModel:
+	Unexpected key(s) in state_dict: "position_embedding_table.weight", "blocks.0.sa.heads.0.tril", "blocks.0.sa.heads.0.key.weight", "blocks.0.sa.heads.0.query.weight", "blocks.0.sa.heads.0.value.weight", "blocks.0.sa.heads.1.tril", "blocks.0.sa.heads.1.key.weight", "blocks.0.sa.heads.1.query.weight", "blocks.0.sa.heads.1.value.weight", "blocks.0.sa.heads.2.tril", "blocks.0.sa.heads.2.key.weight", "blocks.0.sa.heads.2.query.weight", "blocks.0.sa.heads.2.value.weight", "blocks.0.sa.heads.3.tril", "blocks.0.sa.heads.3.key.weight", "blocks.0.sa.heads.3.query.weight", "blocks.0.sa.heads.3.value.weight", "blocks.0.sa.proj.weight", "blocks.0.sa.proj.bias", "blocks.0.ffwd.net.0.weight", "blocks.0.ffwd.net.0.bias", "blocks.0.ffwd.net.2.weight", "blocks.0.ffwd.net.2.bias", "blocks.0.ln1.weight", "blocks.0.ln1.bias", "blocks.0.ln2.weight", "blocks.0.ln2.bias", "blocks.1.sa.heads.0.tril", "blocks.1.sa.heads.0.key.weight", "blocks.1.sa.heads.0.query.weight", "blocks.1.sa.heads.0.value.weight", "blocks.1.sa.heads.1.tril", "blocks.1.sa.heads.1.key.weight", "blocks.1.sa.heads.1.query.weight", "blocks.1.sa.heads.1.value.weight", "blocks.1.sa.heads.2.tril", "blocks.1.sa.heads.2.key.weight", "blocks.1.sa.heads.2.query.weight", "blocks.1.sa.heads.2.value.weight", "blocks.1.sa.heads.3.tril", "blocks.1.sa.heads.3.key.weight", "blocks.1.sa.heads.3.query.weight", "blocks.1.sa.heads.3.value.weight", "blocks.1.sa.proj.weight", "blocks.1.sa.proj.bias", "blocks.1.ffwd.net.0.weight", "blocks.1.ffwd.net.0.bias", "blocks.1.ffwd.net.2.weight", "blocks.1.ffwd.net.2.bias", "blocks.1.ln1.weight", "blocks.1.ln1.bias", "blocks.1.ln2.weight", "blocks.1.ln2.bias", "ln_f.weight", "ln_f.bias", "lm_head.weight", "lm_head.bias". 
+	size mismatch for token_embedding_table.weight: copying a param with shape torch.Size([65, 32]) from checkpoint, the shape in current model is torch.Size([65, 65]).
+

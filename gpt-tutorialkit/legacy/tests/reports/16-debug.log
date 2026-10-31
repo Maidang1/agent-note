@@ -1,0 +1,18 @@
+# 16 因果掩码：未来位置必须看不见 (debug)  exit=1 4293ms PASS=True
+--- stdout ---
+T = 9  block_size = 8
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+    h(x)
+    ~^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/gpt.py", line 84, in forward
+    wei = wei.masked_fill(self.tril[:T, :T] == 0, float('-inf')) # (B, T, T)
+RuntimeError: The size of tensor a (8) must match the size of tensor b (9) at non-singleton dimension 2
+

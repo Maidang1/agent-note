@@ -1,0 +1,25 @@
+# 13 Head的构造函数：三个投影、一个下三角掩码、一个dropout (default)  exit=0 3682ms PASS=True
+--- stdout ---
+head_size = 8  n_embd = 32
+--- 可训练参数 (named_parameters) ---
+  key.weight (8, 32) requires_grad= True
+  query.weight (8, 32) requires_grad= True
+  value.weight (8, 32) requires_grad= True
+--- 缓存 buffer (register_buffer, 不参与训练) ---
+  tril (8, 8)
+tril 下三角矩阵内容:
+tensor([[1., 0., 0., 0., 0., 0., 0., 0.],
+        [1., 1., 0., 0., 0., 0., 0., 0.],
+        [1., 1., 1., 0., 0., 0., 0., 0.],
+        [1., 1., 1., 1., 0., 0., 0., 0.],
+        [1., 1., 1., 1., 1., 0., 0., 0.],
+        [1., 1., 1., 1., 1., 1., 0., 0.],
+        [1., 1., 1., 1., 1., 1., 1., 0.],
+        [1., 1., 1., 1., 1., 1., 1., 1.]])
+dropout 概率 p = 0.1
+可训练参数总数 = 768
+按 3 x Linear(n_embd=32, head_size=8, bias=False) 估算 = 768
+OK
+
+--- stderr ---
+

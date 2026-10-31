@@ -1,0 +1,69 @@
+---
+import { lessons, modules } from '../lib/course';
+
+interface Props {
+  current?: string; // 课程 id，或 'guide' / 'map'
+}
+const { current = '' } = Astro.props;
+const currentModule = lessons.find((l) => l.id === current)?.module;
+---
+<aside class="sidebar">
+  <a href="/guide" class="sidebar-brand">手写 GPT</a>
+  <div class="sidebar-progress" data-progress-total={lessons.length}>
+    <div class="progress-track"><div class="progress-bar" data-progress-bar style="width:0%"></div></div>
+    <span data-progress-text>0 / {lessons.length} 课</span>
+  </div>
+  <nav aria-label="课程目录">
+    <a href="/guide" class="sidebar-link" aria-current={current === 'guide' ? 'page' : undefined}>开始之前：全貌导读</a>
+    <a href="/map" class="sidebar-link" aria-current={current === 'map' ? 'page' : undefined}>源码地图</a>
+    {modules.map((m, mi) => {
+      const items = lessons.filter((l) => l.module === m.id);
+      return (
+        <details class="sidebar-group" open={currentModule === m.id || (!currentModule && mi === 0)}>
+          <summary>
+            <span class="sidebar-group-name">{mi + 1}. {m.title}</span>
+            <span class="sidebar-group-count" data-group-count={items.map((l) => l.id).join(' ')}>0/{items.length}</span>
+          </summary>
+          <ul>
+            {items.map((l) => (
+              <li>
+                <a href={`/${l.slug}`} data-lesson={l.id} aria-current={current === l.id ? 'page' : undefined}>
+                  <span class="lesson-mark" aria-hidden="true"></span>
+                  <span class="lesson-num">{l.order}</span>
+                  <span>{l.title}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </details>
+      );
+    })}
+  </nav>
+</aside>
+
+<script>
+  import { getDone, PROGRESS_EVENT } from '../lib/progress';
+
+  function paint() {
+    let done = 0;
+    document.querySelectorAll<HTMLAnchorElement>('a[data-lesson]').forEach((a) => {
+      const d = getDone(a.dataset.lesson!);
+      a.dataset.state = d ? (d.viaSolution ? 'solution' : 'done') : '';
+      if (d) done += 1;
+    });
+    document.querySelectorAll<HTMLElement>('[data-group-count]').forEach((el) => {
+      const ids = el.dataset.groupCount!.split(' ');
+      el.textContent = `${ids.filter((id) => getDone(id)).length}/${ids.length}`;
+    });
+    const box = document.querySelector<HTMLElement>('[data-progress-total]');
+    if (box) {
+      const total = Number(box.dataset.progressTotal);
+      box.querySelector<HTMLElement>('[data-progress-bar]')!.style.width = `${(done / total) * 100}%`;
+      box.querySelector<HTMLElement>('[data-progress-text]')!.textContent = `${done} / ${total} 课`;
+    }
+  }
+  paint();
+  window.addEventListener(PROGRESS_EVENT, paint);
+  window.addEventListener('storage', paint);
+  document.querySelector('a[aria-current="page"]')?.scrollIntoView({ block: 'center' });
+</script>

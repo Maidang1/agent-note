@@ -1,0 +1,14 @@
+# 15 为什么要乘 head_size 的 -0.5 次方：稳住 softmax (default)  exit=0 3453ms PASS=True
+--- stdout ---
+head_size = k.shape[-1] = 8
+缩放因子 **-0.5 = 0.3535533905932738   即 1/sqrt(head_size)
+raw   分数 min=-2.050 max=3.180 std=1.091
+scaled 分数 min=-0.725 max=1.124 std=0.386
+raw   softmax 后最大概率 = 0.7143
+scaled softmax 后最大概率 = 0.402
+raw   softmax 平均熵(越高越平) = 1.2989
+scaled softmax 平均熵 = 1.5551
+OK
+
+--- stderr ---
+

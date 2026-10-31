@@ -1,0 +1,21 @@
+# 08 摊平view与交叉熵：手算概率对照模型损失 (debug)  exit=1 3638ms PASS=True
+--- stdout ---
+broken 类别数 C = 5 但 targets 最大可能是 61
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 11, in <module>
+    F.cross_entropy(broken.reshape(B*T, C), yb.reshape(B*T))
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/functional.py", line 3561, in cross_entropy
+    return torch._C._nn.cross_entropy_loss(
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^
+        input,
+        ^^^^^^
+    ...<5 lines>...
+        label_smoothing,
+        ^^^^^^^^^^^^^^^^
+    )
+    ^
+IndexError: Target 21 is out of bounds.
+

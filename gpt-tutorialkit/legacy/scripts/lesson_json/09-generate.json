@@ -1,0 +1,145 @@
+{
+  "id": "09",
+  "order": 9,
+  "module": "数据与Bigram",
+  "title": "generate：softmax抽一个字符再接回去循环",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 83,
+      "end": 96,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L83-L96"
+    }
+  ],
+  "goal": "看懂生成是\"预测下一个→抽样→接上去→再预测\"的自回归循环。",
+  "prerequisites": [
+    "07"
+  ],
+  "explanation": [
+    "训练完想让模型写东西就调generate。它从一段起始上下文开始，一个字符一个字符往后接，每轮做四件事：前向算logits、只取最后一步打分、softmax变概率、按概率抽一个新字符，再把新字符拼到序列末尾进入下一轮——这叫自回归。",
+    "右侧先不直接调generate，而是亲手把这个循环写5遍（第8-17行），每步打印\"当前结尾字符→最高分→实际抽到\"，看清每一步在干嘛；然后再调一次真正的model.generate(context, max_new_tokens=20)，它在方法内部做的就是同样的事。",
+    "此刻模型还没训练，权重随机，softmax接近均匀分布，抽出来基本是乱码——这很正常，不代表模型坏了，更不承诺英文质量。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 7,
+      "title": "让辅助工具准备好模型，造一个起始上下文",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns。第3行取出torch和F。第4行实例化模型并搬到设备。第5行造一个(1,1)的全0张量当起始上下文：1段、1个位置、编号0（对应字符表第一个字符，通常是换行），dtype必须是long因为要当下标。第6行打印它并decode成文字。第7行把它命名为idx，后面会不断变长。generate这个方法本身是模型类内部定义好的，右侧先不直接调它。"
+    },
+    {
+      "start": 8,
+      "end": 13,
+      "title": "手动跑5步：看清每轮在做什么",
+      "explanation": "第8行for循环跑5次。第9行model(idx)前向算logits（不传targets所以loss不要）。第10行logits[:, -1, :]只取最后一个位置的打分，形状从(B,T,C)收成(B,C)——我们只关心\"最后那个字符后面接什么\"。第11行F.softmax把打分变成概率。第12行torch.multinomial按概率抽1个编号idx_next：概率大的更易被抽到，但不永远选最大，所以有随机性。第13行argmax找出概率最高的那个编号top，仅用于打印对照。"
+    },
+    {
+      "start": 14,
+      "end": 17,
+      "title": "打印每步对照，把新字符拼回序列",
+      "explanation": "第14-16行打印这一步：当前idx结尾的字符、概率最高的字符及其概率、实际抽到的字符。第17行torch.cat把新抽到的idx_next沿dim=1拼到idx末尾，长度T→T+1，进入下一轮。"
+    },
+    {
+      "start": 18,
+      "end": 21,
+      "title": "打印手动结果，再调真正的generate",
+      "explanation": "第18行decode手动5步后的idx。第19行调用模型类内部定义好的generate方法：model.generate(context, max_new_tokens=20)，它在方法内部做的就是上面8-17行重复20次。第20行decode它的输出out。第21行提醒：模型还没训练，权重随机，输出近似乱码，不代表英文质量。"
+    },
+    {
+      "start": 22,
+      "end": 22,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第22行检查out形状是(1, 21)：1段，初始1个字符加新生成20个字符。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 83,
+      "end": 83,
+      "explanation": "定义generate(idx, max_new_tokens)，idx是当前(B,T)上下文。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 85,
+      "end": 85,
+      "explanation": "循环max_new_tokens次，每次生成一个新字符。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 87,
+      "end": 87,
+      "explanation": "self(idx)前向，不带targets所以只拿logits。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 89,
+      "end": 89,
+      "explanation": "logits[:, -1, :]只取最后时间步，形状(B,C)。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 91,
+      "end": 91,
+      "explanation": "F.softmax把打分变成(B,C)概率分布。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 93,
+      "end": 93,
+      "explanation": "torch.multinomial按概率抽1个编号，形状(B,1)。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 95,
+      "end": 95,
+      "explanation": "torch.cat把新编号拼到序列末尾，长度T+1。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 96,
+      "end": 96,
+      "explanation": "循环结束返回拼长后的完整idx。"
+    }
+  ],
+  "input": "观察每步\"当前结尾字符→最高概率→实际抽到\"；可改max_new_tokens。",
+  "expected": "打印初始上下文、5步手动抽样过程、generate(20)输出；输出近随机字符；形状(1,21)。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch, F = ns['torch'], ns['F']\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(ns['device'])\ncontext = torch.zeros((1, 1), dtype=torch.long, device=ns['device'])\nprint('初始上下文:', context.tolist(), '解码=', repr(ns['decode'](context[0].tolist())))\nidx = context\nfor step in range(5):\n    logits, _ = model(idx)\n    last = logits[:, -1, :]\n    probs = F.softmax(last, dim=-1)\n    idx_next = torch.multinomial(probs, num_samples=1)\n    top = int(probs.argmax())\n    print('第%d步: 结尾=%r 最高分=%r(%.3f) 抽到=%r' % (\n        step, ns['decode'](idx[0].tolist())[-1:], ns['decode']([top]),\n        float(probs[0, top]), ns['decode'](idx_next[0].tolist())))\n    idx = torch.cat((idx, idx_next), dim=1)\nprint('手动循环结果:', repr(ns['decode'](idx[0].tolist())))\nout = model.generate(context, max_new_tokens=20)\nprint('generate(20) 输出:', repr(ns['decode'](out[0].tolist())))\nprint('注意: 模型尚未训练，输出近似随机字符，不代表英文质量。')\nassert out.shape == (1, 21)\n",
+  "exercise": {
+    "instruction": "把max_new_tokens改成40，观察序列变长；多跑一次结果不同。",
+    "hint": "随机性来自multinomial；重设种子可复现。",
+    "solution": "out.shape第二维=1+40=41。"
+  },
+  "debug": {
+    "instruction": "忘了上下文必须是long，用默认float张量喂Embedding。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(ns['device'])\nbad_ctx = torch.zeros((1, 1))\nprint('bad_ctx dtype:', bad_ctx.dtype, '(默认float32，不是long)')\nmodel.generate(bad_ctx, max_new_tokens=5)\n",
+    "expectedError": "RuntimeError",
+    "fix": "Embedding下标必须long；写torch.zeros((1,1), dtype=torch.long, device=...)。"
+  },
+  "modifications": [
+    {
+      "original": "原版直接generate 500个字符长生成",
+      "teaching": "先手动跑5步打印细节，再generate(20)",
+      "reason": "把黑箱循环拆成可见步骤，不做长生成。"
+    }
+  ],
+  "checkpoints": [
+    "每步只取最后时间步",
+    "概率和为1且抽样有随机性",
+    "输出形状随max_new_tokens增长"
+  ],
+  "glossary": [
+    {
+      "term": "自回归",
+      "explanation": "用已生成内容当新输入，逐个产出后续字符。"
+    },
+    {
+      "term": "multinomial",
+      "explanation": "按给定概率分布做有放回抽样。"
+    },
+    {
+      "term": "cat",
+      "explanation": "沿某一维拼接张量。"
+    }
+  ]
+}

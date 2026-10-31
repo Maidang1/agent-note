@@ -1,0 +1,139 @@
+{
+  "id": "29",
+  "order": 29,
+  "module": "训练GPT",
+  "title": "把模型搬到设备、数参数、走一步梯度下降",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 198,
+      "end": 204,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L198-L204"
+    },
+    {
+      "file": "gpt.py",
+      "start": 217,
+      "end": 220,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L217-L220"
+    }
+  ],
+  "goal": "完成模型实例化、.to(device)、参数量统计、AdamW 优化器，并亲手做一次前向+反向+更新。",
+  "prerequisites": [
+    "28"
+  ],
+  "explanation": [
+    "前面都是搭楼和看形状，这节真正走一步训练。流程是：把模型搬到设备 → 数一下它有多少可训练参数 → 建一个 AdamW 优化器接管所有参数 → 取一批真实文字 → 前向算损失 → 清梯度、反传、更新参数。只走一步，然后换一批新数据再算一次损失做对照。",
+    "数参数用的是 sum(p.numel() for p in model.parameters())：把每个参数数组的元素个数全加起来。本次轻量配置下 GPT 一共 29761 个参数（约 0.03M），和原版上千万级模型是同一套结构、只是尺寸小。优化器的 learning_rate 沿用 ns 里的 3e-4。",
+    "一个必须知道的细节：ns['model'] = model 这行是把刚造好的模型登记回收纳盒。因为 ns 里那个 estimate_loss 函数内部写死了按名字引用 model，后面要用到它，就得先把我们的 model 放进去。一步训练四步曲 zero_grad→backward→step 缺一不可；为了不“自欺”，更新后换一批新数据重算 loss。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "造模型并登记回 ns",
+      "explanation": "第1到4行照常；第4行 .to(device) 把参数放到 cpu；第5行 ns['model'] = model 把模型名字写回收纳盒，供 ns 里的 estimate_loss 等内部函数按名取用。这行对后面第30课很关键。"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "title": "数参数量",
+      "explanation": "第6行遍历 model.parameters()，把每个参数的元素个数 numel 累加；第7行打印总数 29761（约 0.0298M）。这是模型大小的直观刻度——同一套结构放大到原版尺寸就是上千万。"
+    },
+    {
+      "start": 8,
+      "end": 8,
+      "title": "建优化器",
+      "explanation": "第8行 AdamW 接管 model.parameters()，学习率取 ns['learning_rate']=3e-4。优化器记住这些参数，并在 step 时按梯度调整它们。"
+    },
+    {
+      "start": 9,
+      "end": 11,
+      "title": "取一批数据、前向、记初始损失",
+      "explanation": "第9行用 ns 里的 get_batch('train') 随机取一段训练文字 (xb,yb)；第10行 model(xb,yb) 前向算出 loss；第11行打印更新前 loss（随机初始模型约 4.1 到 4.2）。"
+    },
+    {
+      "start": 12,
+      "end": 14,
+      "title": "一步梯度下降三步曲",
+      "explanation": "第12行 zero_grad 清空上一步残留梯度；第13行 loss.backward() 反向算出每个参数的梯度；第14行 optimizer.step() 按梯度真正更新参数。到这里模型参数已经和第6行不一样了。"
+    },
+    {
+      "start": 15,
+      "end": 17,
+      "title": "换新批次再算一次",
+      "explanation": "第15、16行重新取一批数据、再前向一次；第17行打印新 batch 上的 loss。故意换新批是因为同批重算会带着上一步的记忆，不能说明参数真的变好。"
+    },
+    {
+      "start": 18,
+      "end": 18,
+      "title": "断言",
+      "explanation": "第18行只要求参数量大于 0，确认楼里确实有可训练参数。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 198,
+      "end": 199,
+      "explanation": "实例化 GPTLanguageModel 并 .to(device)，让参数和数据在同一设备。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 201,
+      "end": 201,
+      "explanation": "sum(p.numel() for p in m.parameters())/1e6 统计百万参数。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 204,
+      "end": 204,
+      "explanation": "AdamW 优化器接管 model.parameters()，学习率保持原版 3e-4。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 217,
+      "end": 220,
+      "explanation": "前向算 loss → zero_grad 清梯度 → backward 算梯度 → step 更新。"
+    }
+  ],
+  "input": "可观察参数量；不要改大 n_embd，否则变慢。",
+  "expected": "打印参数量（百万级以下）、第一步 loss、走一步后新 batch 的 loss；断言参数总数>0。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nns['model'] = model\nn_params = sum(p.numel() for p in model.parameters())\nprint('参数量:', n_params, '= %.4fM' % (n_params / 1e6))\noptimizer = torch.optim.AdamW(model.parameters(), lr=ns['learning_rate'])\nxb, yb = ns['get_batch']('train')\nlogits, loss = model(xb, yb)\nprint('更新前 loss:', loss.item())\noptimizer.zero_grad(set_to_none=True)\nloss.backward()\noptimizer.step()\nxb2, yb2 = ns['get_batch']('train')\nlogits2, loss2 = model(xb2, yb2)\nprint('走一步后(新batch) loss:', loss2.item())\nassert n_params > 0\n",
+  "exercise": {
+    "instruction": "把 learning_rate 在 overrides 里改成 3e-3（放大10倍），观察一步后 loss 变化是否更剧烈。",
+    "hint": "load_original('gpt', overrides={'learning_rate': 3e-3})。",
+    "solution": "步幅更大，loss 波动通常更明显。"
+  },
+  "debug": {
+    "instruction": "对同一张计算图连续 backward 两次，观察 PyTorch 报错。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nns['model'] = model\nxb, yb = ns['get_batch']('train')\nlogits, loss = model(xb, yb)\nloss.backward()\nloss.backward()\n",
+    "expectedError": "RuntimeError",
+    "fix": "每次 backward 后梯度图已释放；要先 zero_grad 再做新的前向和 backward。"
+  },
+  "modifications": [
+    {
+      "original": "原版约10M参数、max_iters=5000",
+      "teaching": "轻量模型、只走一步",
+      "reason": "展示训练流程，不启动长训练。"
+    }
+  ],
+  "checkpoints": [
+    "参数量被实时统计",
+    "optimizer 接管全部参数",
+    "一次 forward/backward/step 完成"
+  ],
+  "glossary": [
+    {
+      "term": "AdamW",
+      "explanation": "带动量与权重衰减的常用优化器，自动调整每个参数步幅。"
+    },
+    {
+      "term": "反向传播 backward",
+      "explanation": "从损失出发，用链式法则算出每个参数的梯度。"
+    },
+    {
+      "term": "梯度清零 zero_grad",
+      "explanation": "每步前清空旧梯度，否则梯度会累加。"
+    }
+  ]
+}

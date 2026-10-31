@@ -1,0 +1,121 @@
+{
+  "id": "16",
+  "order": 16,
+  "module": "手写GPT自注意力",
+  "title": "因果掩码：未来位置必须看不见",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 84,
+      "end": 85,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L84-L85"
+    }
+  ],
+  "goal": "看懂 masked_fill(-inf) 如何把上三角清零，并验证 softmax 后未来位置概率为 0、每行和为 1。",
+  "prerequisites": [
+    "15"
+  ],
+  "explanation": [
+    "GPT 在猜下一个字：位置 i 做预测时只能看位置 0..i 的历史，绝不能偷看 i+1 以后的未来。上一节得到的缩放分数 wei 还没限制这一点——它让每个位置都看到了所有位置。这一节用 Head 自带的 tril 下三角矩阵把未来位置屏蔽掉。",
+    "整体流程：复现缩放分数 wei → 用 masked_fill 把 tril==0 的位置写成 -inf → 对最后一维做 softmax。-inf 经过 exp 变成 0，所以上三角严格为 0；剩下的下三角位置 softmax 后每行和为 1。",
+    "你会看到三块矩阵并排：缩放后分数、填 -inf 后、softmax 后。上三角从实数变成 -inf 再变成 0；第 0 行没有任何历史，概率是 [1,0,0,...]；越往后的行能参考的位置越多。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备辅助工具",
+      "explanation": "第1–3行取出 load_original、ns、torch。第4行取出 F，后面要用 F.softmax。"
+    },
+    {
+      "start": 6,
+      "end": 12,
+      "title": "建 Head 并算出缩放后分数",
+      "explanation": "第6–8行固定种子、建 head_size=8 的 Head。第9–10行用 B=1、T=5 造一段随机输入 x。第11–12行投影 k/q 并乘上 1/sqrt(head_size)，得到缩放后的 wei——和上一节末尾一样。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "打印缩放后分数",
+      "explanation": "第13–14行打印 wei[0]（本批只有一段）。这是一个 5×5 的实数表，右上角和左下角都有数字——现在还没有任何屏蔽。"
+    },
+    {
+      "start": 16,
+      "end": 18,
+      "title": "用 tril 把未来位置填成 -inf",
+      "explanation": "第16行 masked_fill 把 h.tril[:T,:T]==0 的位置（也就是上三角）替换成 float('-inf')。tril 是上一课体检时见过的下三角 0/1 矩阵；[:T,:T] 是为了应对 T<block_size 的情况。第17–18行打印填完后的矩阵。"
+    },
+    {
+      "start": 20,
+      "end": 22,
+      "title": "对填完 -inf 的矩阵做 softmax",
+      "explanation": "第20行沿最后一维做 softmax。exp(-inf)=0，所以上三角位置贡献为 0；下三角位置归一化成概率。第21–22行打印最终权重 p[0]。"
+    },
+    {
+      "start": 23,
+      "end": 25,
+      "title": "打印三条观察量",
+      "explanation": "第23行用 triu(diagonal=1) 取出上三角，核对是否全为 0。第24行打印每行和，应该都≈1。第25行打印对角线权重——第 0 行只能看自己，对角权重应为 1。"
+    },
+    {
+      "start": 26,
+      "end": 28,
+      "title": "assert 自检",
+      "explanation": "第26行硬核对上三角全 0，第27行用 allclose 核对每行和为 1，第28行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 84,
+      "end": 84,
+      "explanation": "wei.masked_fill(self.tril[:T,:T]==0, float('-inf'))：未来位置填 -inf；tril[:T,:T] 是为了应对 T<block_size 的情况。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 85,
+      "end": 85,
+      "explanation": "wei = F.softmax(wei, dim=-1)：沿最后一维（被关注的位置维）做 softmax，得到概率权重。"
+    }
+  ],
+  "input": "改 T=3 或 T=block_size，观察上三角仍为 0、每行和仍为 1。",
+  "expected": "打印 5×5 三块矩阵；上三角未来位置 softmax 后严格为 0；每一行求和≈1；第 0 行对角线为 1。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nF = ns['F']\n\ntorch.manual_seed(0)\nhead_size = 8\nh = ns['Head'](head_size)\nB, T, C = 1, 5, ns['n_embd']\nx = torch.randn(B, T, C)\nk = h.key(x); q = h.query(x)\nwei = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5\nprint('缩放后分数 wei[0]:')\nprint(wei[0].detach())\n\nwei_masked = wei.masked_fill(h.tril[:T,:T] == 0, float('-inf'))\nprint('填 -inf 后(右上角未来位置):')\nprint(wei_masked[0].detach())\n\np = F.softmax(wei_masked, dim=-1)\nprint('softmax 后注意力权重 p[0]:')\nprint(p[0].detach())\nprint('上三角(未来位置)是否全为 0: ', bool((p[0].triu(diagonal=1) == 0).all()))\nprint('每行和 = ', p[0].sum(-1).tolist())\nprint('对角线(只看自己)权重 =', p[0].diag().tolist())\nassert torch.all(p[0].triu(diagonal=1) == 0)\nassert torch.allclose(p[0].sum(-1), torch.ones(T), atol=1e-6)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 tril 换成 torch.triu（上三角），看看会发生什么——位置 i 只能看未来而不是历史。",
+    "hint": "triu[i,j]=0 的位置是下三角，会被填 -inf。row 0 全是上三角（不屏蔽），row 最后一行只有对角是上三角。",
+    "solution": "用 torch.triu 后 row 0 一个位置都不屏蔽（softmax 看到所有未来），最后一行除对角外全是 -inf（只能看自己）；方向正好反了，这是“反向 GPT”。"
+  },
+  "debug": {
+    "instruction": "故意让 T 超过 block_size（这里是 8），观察 tril[:T,:T] 形状对不上导致的报错。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nh = ns['Head'](8)\n# T 超过 block_size，tril[:T,:T] 只有 block_size 行/列，形状对不上\nx = torch.randn(1, ns['block_size']+1, ns['n_embd'])\nprint('T =', x.shape[1], ' block_size =', ns['block_size'])\nh(x)\n",
+    "expectedError": "RuntimeError: The size of tensor a (8) must match the size of tensor b (9) at non-singleton dimension 2",
+    "fix": "预测时输入长度不能超过 block_size；原版 generate 里用 idx[:, -block_size:] 把序列裁到 block_size 以内。"
+  },
+  "modifications": [
+    {
+      "original": "原版直接用 self.tril[:T,:T] 切片",
+      "teaching": "本步打印三块矩阵对比",
+      "reason": "让“分数→-inf→0”的变化过程可见。"
+    }
+  ],
+  "checkpoints": [
+    "softmax 后上三角严格为 0",
+    "每行和≈1",
+    "第 0 行对角线概率为 1"
+  ],
+  "glossary": [
+    {
+      "term": "因果掩码 causal mask",
+      "explanation": "禁止当前位置看到未来位置的掩码，是 decoder-only Transformer 的标配。"
+    },
+    {
+      "term": "masked_fill",
+      "explanation": "按布尔掩码把选中位置替换成指定值（这里是 -inf）。"
+    },
+    {
+      "term": "下三角 tril",
+      "explanation": "主对角线及下方为 1、上方为 0 的矩阵。"
+    }
+  ]
+}

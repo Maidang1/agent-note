@@ -1,0 +1,11 @@
+# 15 为什么要乘 head_size 的 -0.5 次方：稳住 softmax (debug)  exit=1 3645ms PASS=True
+--- stdout ---
+错误缩放后 softmax 最大概率 = 0.9999964237213135
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 12, in <module>
+    assert p.max().item() < 0.9, 'softmax 过度尖锐，几乎只看一个位置'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: softmax 过度尖锐，几乎只看一个位置
+

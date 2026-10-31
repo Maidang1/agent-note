@@ -1,0 +1,12 @@
+# 06 BigramLanguageModel：一张查表的Embedding表 (default)  exit=0 3592ms PASS=True
+--- stdout ---
+model 类型: BigramLanguageModel
+是 nn.Module 吗: True
+Embedding 表形状: (65, 65) (词表数 x 词表数)
+可训练参数总数: 4225 = vocab_size*vocab_size = 4225
+注册的参数名: ['token_embedding_table.weight']
+Embedding 表第0行前5个数: [0.1807715743780136, -0.06998809427022934, -0.3596234917640686, -0.9152044653892517, 0.625765323638916]
+小词表实例的表形状: (10, 10)
+
+--- stderr ---
+

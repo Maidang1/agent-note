@@ -1,0 +1,9 @@
+# 31 从零字符生成：原版没包 no_grad、也没 eval，别期待通顺 (default)  exit=0 4776ms PASS=True
+--- stdout ---
+从零字符生成(未训练): '\nkEyhK$.PCJ;oP$:QuTWeKZY!z wWFw'
+生成长度: 31 (起始1 + 新30)
+with no_grad 后 requires_grad = False
+注意：原版 generate 未包 no_grad，也未 eval；这是未训练模型，不承诺质量。
+
+--- stderr ---
+

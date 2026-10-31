@@ -1,0 +1,115 @@
+{
+  "id": "06",
+  "order": 6,
+  "module": "数据与Bigram",
+  "title": "BigramLanguageModel：一张查表的Embedding表",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 61,
+      "end": 66,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L61-L66"
+    }
+  ],
+  "goal": "看懂Bigram模型就是一张(vocab_size, vocab_size)的可训练查表，以及nn.Module起什么作用。",
+  "prerequisites": [
+    "05"
+  ],
+  "explanation": [
+    "Bigram是最简单的语言模型：它认为\"下一个字符只由当前这一个字符决定\"。要实现这件事只需要一张大表——每个字符一行，行里存着\"接在它后面各个字符的原始打分(logits)\"，查表即预测，不需要矩阵乘法。这个类BigramLanguageModel是辅助工具load_original在内部定义好的，右侧不写class，只是把它取出来实例化，看看里面这张表长什么样。",
+    "实例化后，model.token_embedding_table就是那张表：行数=字符种类数V，每行向量长度也=V，所以是(V,V)的可训练张量。参数总数=V×V=65×65=4225个，初始是随机数，模型还什么都没学会。它继承nn.Module这个基类，PyTorch才会自动帮我们登记哪些张量是可训练参数。",
+    "右侧还会用vocab_size=10再实例化一个小模型对照，看表形状跟着传入的词表大小变。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "让辅助工具准备好模型类，实例化一个",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns这个收纳盒。第3行取出torch和nn（nn是PyTorch模型积木库的别名）。第4行取出vocab_size记为V（本节约65）。第5行从ns取出BigramLanguageModel这个类并传入V实例化得到model。这个类本身是辅助工具在内部定义好的——它继承nn.Module，在构造函数里建好那张Embedding表——右侧并没有重新写class或super().__init__()。"
+    },
+    {
+      "start": 6,
+      "end": 9,
+      "title": "确认它是个nn.Module积木，取出那张查表",
+      "explanation": "第6行打印model的类名。第7行用isinstance检查model是不是nn.Module的实例；是的话PyTorch才会自动帮我们登记可训练参数、支持to(device)和parameters()。第8行取出model.token_embedding_table，这就是那张查表。第9行打印它的weight形状，应为(V,V)：行数是字符种类数，每一行长度也是字符种类数。"
+    },
+    {
+      "start": 10,
+      "end": 13,
+      "title": "数一数有多少可训练参数，看一眼初始随机数",
+      "explanation": "第10行sum遍历model.parameters()里每个张量，用numel()数它有几个数，加起来得到n_params。第11行打印总数，应等于V×V=65×65=4225。第12行named_parameters()列出所有参数的名字，这里只有一张表，名字是token_embedding_table.weight。第13行打印表第0行前5个数，它们是随机初始化的小数——此时模型还没训练，打分是乱的。"
+    },
+    {
+      "start": 14,
+      "end": 15,
+      "title": "换一个词表大小再实例化，看表跟着变",
+      "explanation": "第14行用vocab_size=10再实例化一个小模型small。第15行打印它的表形状，应为(10,10)。这说明表的行列数完全由构造时传入的vocab_size决定，参数总数也跟着变。"
+    },
+    {
+      "start": 16,
+      "end": 18,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第16行检查表形状是(V,V)，第17行检查参数总数等于V×V，第18行检查model确实是nn.Module实例。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 61,
+      "end": 61,
+      "explanation": "声明BigramLanguageModel继承nn.Module，成为可登记参数、可被优化器驱动的模型积木。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 63,
+      "end": 64,
+      "explanation": "__init__(vocab_size)接收词表大小；第一行super().__init__()完成nn.Module内部初始化。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 66,
+      "end": 66,
+      "explanation": "建Embedding查找表(vocab_size, vocab_size)：输入一个字符编号，直接取出它对\"下一个字符\"的全部原始打分。"
+    }
+  ],
+  "input": "观察Embedding表形状和参数总数；可临时实例化一个vocab_size=10的小模型对照。",
+  "expected": "打印模型类型、是否为nn.Module、表形状(vocab,vocab)、参数总数=vocab²、参数名列表；小模型表形状为(10,10)。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch, nn = ns['torch'], ns['nn']\nV = ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V)\nprint('model 类型:', type(model).__name__)\nprint('是 nn.Module 吗:', isinstance(model, nn.Module))\nemb = model.token_embedding_table\nprint('Embedding 表形状:', tuple(emb.weight.shape), '(词表数 x 词表数)')\nn_params = sum(p.numel() for p in model.parameters())\nprint('可训练参数总数:', n_params, '= vocab_size*vocab_size =', V * V)\nprint('注册的参数名:', [name for name, _ in model.named_parameters()])\nprint('Embedding 表第0行前5个数:', emb.weight.data[0, :5].tolist())\nsmall = ns['BigramLanguageModel'](10)\nprint('小词表实例的表形状:', tuple(small.token_embedding_table.weight.shape))\nassert tuple(emb.weight.shape) == (V, V)\nassert n_params == V * V\nassert isinstance(model, nn.Module)\n",
+  "exercise": {
+    "instruction": "实例化一个vocab_size=20的模型，手算它有多少参数，运行验证。",
+    "hint": "参数数=行数×列数=20×20。",
+    "solution": "model20 = ns[\"BigramLanguageModel\"](20)，参数总数应为400。"
+  },
+  "debug": {
+    "instruction": "实例化时忘了传vocab_size参数，观察构造函数的参数要求。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nm = ns['BigramLanguageModel']()\n",
+    "expectedError": "TypeError",
+    "fix": "__init__需要一个vocab_size参数；写成ns[\"BigramLanguageModel\"](ns[\"vocab_size\"])。"
+  },
+  "modifications": [
+    {
+      "original": "原文件第98行才实例化模型",
+      "teaching": "本步只实例化并打印表结构，不接优化器、不训练",
+      "reason": "先把模型\"长什么样\"看清楚再谈训练。"
+    }
+  ],
+  "checkpoints": [
+    "表形状为(vocab,vocab)",
+    "参数总数=vocab²",
+    "模型确为nn.Module子类实例"
+  ],
+  "glossary": [
+    {
+      "term": "nn.Module",
+      "explanation": "PyTorch模型基类，自动登记参数并提供to/parameters/train等方法。"
+    },
+    {
+      "term": "nn.Embedding",
+      "explanation": "一张可训练的查表矩阵，给编号就取出对应向量。"
+    },
+    {
+      "term": "参数parameter",
+      "explanation": "模型里可被训练更新的数字。"
+    }
+  ]
+}

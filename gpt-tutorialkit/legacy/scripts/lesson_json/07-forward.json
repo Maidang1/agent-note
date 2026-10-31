@@ -1,0 +1,145 @@
+{
+  "id": "07",
+  "order": 7,
+  "module": "数据与Bigram",
+  "title": "forward：查表得到logits，带不带targets算两种事",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 68,
+      "end": 81,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L68-L81"
+    }
+  ],
+  "goal": "看懂forward(idx, targets=None)：查表把(B,T)整数变成(B,T,C)打分，带targets才算损失。",
+  "prerequisites": [
+    "06"
+  ],
+  "explanation": [
+    "forward是模型被\"调用\"时真正执行的计算，它是BigramLanguageModel类里的一个方法——辅助工具load_original在内部只把类定义和数据准备好，右侧不写forward，只是把(xb)或(xb, yb)传给model来调用它。输入xb是(B,T)整数编号，forward在方法内部拿着这些编号去Embedding表逐行查表，每个编号取出一行C=V个原始打分，输出变成(B,T,C)。",
+    "targets是可选的。不传（model(xb)）时只返回logits、loss=None，用于预测；传了yb（model(xb, yb)）时，forward内部会把(B,T,C)用view摊平成(B*T,C)、和摊平后的targets一起算交叉熵，返回一个标量loss。右侧还会绕过forward、直接用token_embedding_table(xb)手动查表，验证forward第一步确实就是查表。",
+    "本节打印两种调用的返回形状和loss；B/T/C从查表结果的shape实时解包，应对照本次的batch_size/block_size/vocab_size。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 6,
+      "title": "让辅助工具准备好模型和一批数据",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns这个收纳盒。第3行取出torch。第4行取出本次B（batch_size）、T（block_size）、V（vocab_size）。第5行实例化模型并.to(ns['device'])把它搬到计算设备（CPU上等于没搬）。第6行调get_batch('train')拿到xb和yb。forward这个方法本身是模型类内部定义好的，右侧不写它，只负责把数据喂进去。"
+    },
+    {
+      "start": 7,
+      "end": 9,
+      "title": "不带targets调用forward：只查表不算损失",
+      "explanation": "第7行打印输入xb的形状(B,T)，它是一堆整数编号。第8行model(xb)会调用forward方法（targets缺省为None），它在方法内部拿xb去Embedding表逐行查表，返回(logits, loss)；这里loss_none应为None。第9行打印查表后的logits形状，应为(B,T,V)——每个位置对词表里每个字符都打了一个原始分（叫logits），同时显示loss是None。"
+    },
+    {
+      "start": 10,
+      "end": 12,
+      "title": "带targets调用forward：查表顺便算损失",
+      "explanation": "第10行model(xb, yb)把标准答案yb也传进去。forward在方法内部发现有targets，就把(B,T,C)的logits用view摊平成(B*T, C)，把yb也摊平，然后算交叉熵得到一个标量loss。第11行打印返回的logits形状，已经是(B*T, C)而不是(B,T,C)了，因为返回前被摊平过。第12行loss.dim()=0表示它是一个数（标量），不是一张表；round(float(loss),4)把它转成Python数字方便打印。"
+    },
+    {
+      "start": 13,
+      "end": 16,
+      "title": "绕过forward直接手动查表，验证第一步",
+      "explanation": "第13行右侧直接调用model.token_embedding_table(xb)，和forward内部第一步做的事完全一样，结果manual形状是(B,T,V)。第14行打印它。第15行从manual.shape解包出B2,T2,C2三个维度，第16行打印，应对照第4行取出的B,T,V——这说明C就是vocab_size。这里手动查表只是为了让你看见forward内部那张表被查了一次，右侧并没有重新实现整个forward。"
+    },
+    {
+      "start": 17,
+      "end": 19,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第17行检查不带targets时loss确实是None，第18行检查手动查表形状是(B,T,V)，第19行检查带targets返回的loss是标量（0维）。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 68,
+      "end": 68,
+      "explanation": "定义forward(idx, targets=None)；targets默认None表示只做推理不算损失。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 71,
+      "end": 71,
+      "explanation": "用idx查表得到logits，形状(B,T,C)：每个位置对vocab个下一个字符各有一个原始打分。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 73,
+      "end": 74,
+      "explanation": "targets为None时loss=None，直接返回，对应生成/预测模式。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 75,
+      "end": 75,
+      "explanation": "else分支：传了targets才进入有监督计算——把打分摊平、和标准答案对齐后算交叉熵。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 76,
+      "end": 76,
+      "explanation": "B,T,C = logits.shape解包出三个实时维度。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 77,
+      "end": 78,
+      "explanation": "logits.view(B*T,C)和targets.view(B*T)把批量摊平，每个位置变成独立一条(C,)样本。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 79,
+      "end": 79,
+      "explanation": "F.cross_entropy计算预测分布与标准答案之间的差距，得到标量loss。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 81,
+      "end": 81,
+      "explanation": "无论带不带targets都返回(logits, loss)二元组，loss可能是None。"
+    }
+  ],
+  "input": "对照打印：不带targets时loss为None；带targets时logits被摊平成(B*T,C)。",
+  "expected": "打印输入(B,T)、查表后(B,T,C)、不带targets的loss=None、带targets的标量loss和摊平后的形状；B/T/C实时解包值与batch_size/block_size/vocab_size一致。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\nB, T, V = ns['batch_size'], ns['block_size'], ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V).to(ns['device'])\nxb, yb = ns['get_batch']('train')\nprint('输入 idx xb 形状:', tuple(xb.shape), '(B, T) 整数下标')\nlogits_noloss, loss_none = model(xb)\nprint('不带 targets: logits 形状', tuple(logits_noloss.shape), ' loss =', loss_none)\nlogits, loss = model(xb, yb)\nprint('带 targets: logits 形状', tuple(logits.shape), '(B*T, C，已被view摊平)')\nprint('loss 维数:', loss.dim(), '值 =', round(float(loss), 4))\nmanual = model.token_embedding_table(xb)\nprint('手动查表 (B,T,C):', tuple(manual.shape))\nB2, T2, C2 = manual.shape\nprint('forward 解包 B,T,C =', B2, T2, C2, '(应对照', B, T, V, ')')\nassert loss_none is None\nassert tuple(manual.shape) == (B, T, V)\nassert loss.dim() == 0\n",
+  "exercise": {
+    "instruction": "把model(xb)改成model(xb, targets=None)，确认行为完全一样。",
+    "hint": "targets默认就是None，显式写出来更清楚。",
+    "solution": "loss仍为None，logits形状不变。"
+  },
+  "debug": {
+    "instruction": "给targets传一个长度对不上的切片，观察view摊平时的形状错误。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nV = ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V).to(ns['device'])\nxb, yb = ns['get_batch']('train')\nbad_targets = yb[:, :1]\nprint('不小心只给了第一列做target，形状:', tuple(bad_targets.shape))\nlogits, loss = model(xb, bad_targets)\n",
+    "expectedError": "RuntimeError",
+    "fix": "targets必须和xb同形状(B,T)，摊平后元素数才是B*T；不要随意切短targets。"
+  },
+  "modifications": [
+    {
+      "original": "原版forward同时服务训练与生成",
+      "teaching": "本步把两种调用方式分开打印对照",
+      "reason": "让用户看清targets=None和有targets的差别。"
+    }
+  ],
+  "checkpoints": [
+    "不带targets时loss是None",
+    "查表输出(B,T,C)",
+    "带targets后logits被摊平为(B*T,C)且loss是标量"
+  ],
+  "glossary": [
+    {
+      "term": "forward",
+      "explanation": "模型被调用时执行的前向计算函数。"
+    },
+    {
+      "term": "logits",
+      "explanation": "模型对各类别的原始打分，未经softmax。"
+    },
+    {
+      "term": "B/T/C",
+      "explanation": "批量数/时间步长/通道(类别)数，从张量形状实时解包。"
+    }
+  ]
+}

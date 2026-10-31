@@ -1,0 +1,8 @@
+# 26 穿过 n_layer 个 Block，最后变成每个字的分数 (default)  exit=0 3816ms PASS=True
+--- stdout ---
+穿过 blocks 后: (1, 8, 32)
+穿过 ln_f 后: (1, 8, 32)
+lm_head 输出 logits: (1, 8, 65) (B,T,vocab_size)
+
+--- stderr ---
+

@@ -1,0 +1,129 @@
+{
+  "id": "30",
+  "order": 30,
+  "module": "训练GPT",
+  "title": "把小模型完整跑一遍训练循环和损失评估",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 50,
+      "end": 62,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L50-L62"
+    },
+    {
+      "file": "gpt.py",
+      "start": 206,
+      "end": 220,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L206-L220"
+    }
+  ],
+  "goal": "用 runtime 的小配置完整跑通训练循环，理解 estimate_loss 如何在 train/val 间切换 eval 模式。",
+  "prerequisites": [
+    "29"
+  ],
+  "explanation": [
+    "这节把上一课的“走一步”扩成一个循环，完整跑一遍小模型训练。外层 for 一共走 max_iters=12 步；每隔 eval_interval=6 步（或最后一步）就调一次 estimate_loss 汇报成绩，其余每步都做“取数据→前向→清梯度→反传→更新”。几秒就能跑完。",
+    "estimate_loss 是 ns 里已有的函数，内部做三件事：先 model.eval() 切到评估模式（关掉 dropout，让结果稳定），再分别在 train 和 val 上各抽 eval_iters=3 批算损失并取平均，最后 model.train() 切回训练模式。它头上带 @torch.no_grad，评估时不记录梯度。",
+    "评估条件 iter % eval_interval == 0 or iter == max_iters-1，保证第 0、6 步和最后第 11 步各汇报一次。因为只训练 12 步，loss 只会小幅波动、谈不上明显下降，这是轻量演示的预期，不代表原版 5000 步的效果。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 6,
+      "title": "准备模型、登记、建优化器",
+      "explanation": "第1到5行照常，并把 model 登记回 ns；第6行 AdamW 接管参数。estimate_loss 内部要按名找 model，所以第5行那步不能省。"
+    },
+    {
+      "start": 7,
+      "end": 7,
+      "title": "打印本次训练配置",
+      "explanation": "第7行显示 max_iters=12、eval_interval=6、eval_iters=3，先确认这次循环的节拍：一共走 12 步，每 6 步评一次、每次抽 3 批平均。"
+    },
+    {
+      "start": 8,
+      "end": 11,
+      "title": "外层循环与定期评估",
+      "explanation": "第8行 for 跑 12 步；第9行判断是不是该评估的步（每 6 步或最后一步）；第10行调 ns['estimate_loss']()，它在内部自动 eval、抽 3 批、算 train/val 平均、再切回 train；第11行打印形如 step 0、6、11 的两个 loss。"
+    },
+    {
+      "start": 12,
+      "end": 16,
+      "title": "每步的训练动作",
+      "explanation": "第12行取一批 train 数据；第13行前向算 loss；第14行清梯度；第15行反传；第16行更新参数。评估步也会照常做这 5 步，只是多打印一行。"
+    },
+    {
+      "start": 17,
+      "end": 17,
+      "title": "收尾",
+      "explanation": "第17行循环结束后打印“训练完成。”。退出码 0 即正常跑完；想多看几步趋势，就在 overrides 里改 max_iters。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 50,
+      "end": 58,
+      "explanation": "estimate_loss 用 @torch.no_grad 包起来；先 model.eval()，对 train/val 各抽 eval_iters 批求损失均值。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 60,
+      "end": 62,
+      "explanation": "算完后 model.train() 切回训练模式，恢复 dropout。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 206,
+      "end": 208,
+      "explanation": "for iter in range(max_iters)：外层训练循环，一共走 max_iters 步；这是整个训练的节拍器。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 209,
+      "end": 211,
+      "explanation": "每隔 eval_interval 步或最后一步打印 train/val loss。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 214,
+      "end": 220,
+      "explanation": "常规步：取 train 批、前向、清梯度、反传、更新。"
+    }
+  ],
+  "input": "可在 overrides 调 max_iters（如 24）看多步 loss 趋势；eval_interval 要能整除或接近 max_iters。",
+  "expected": "打印若干 step 的 train/val loss；训练结束退出码为 0。loss 应大致波动，不承诺明显下降。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nns['model'] = model\noptimizer = torch.optim.AdamW(model.parameters(), lr=ns['learning_rate'])\nprint('max_iters=', ns['max_iters'], ' eval_interval=', ns['eval_interval'], ' eval_iters=', ns['eval_iters'])\nfor iter in range(ns['max_iters']):\n    if iter % ns['eval_interval'] == 0 or iter == ns['max_iters'] - 1:\n        losses = ns['estimate_loss']()\n        print(f\"step {iter}: train {float(losses['train']):.3f}, val {float(losses['val']):.3f}\")\n    xb, yb = ns['get_batch']('train')\n    logits, loss = model(xb, yb)\n    optimizer.zero_grad(set_to_none=True)\n    loss.backward()\n    optimizer.step()\nprint('训练完成。')\n",
+  "exercise": {
+    "instruction": "把 max_iters 改成 24、eval_interval 改成 8，重新运行，确认打印的评估步数更多。",
+    "hint": "overrides={'max_iters':24,'eval_interval':8}。",
+    "solution": "会看到 step 0、8、16、23 的评估输出。"
+  },
+  "debug": {
+    "instruction": "忘记把 model 挂到 ns['model']，直接调 estimate_loss，观察原版代码引用不到全局 model。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nprint('忘记 ns[\\'model\\']=model')\nprint(ns['estimate_loss']())\n",
+    "expectedError": "NameError",
+    "fix": "estimate_loss 内部引用全局 model；调用前必须 ns['model']=model。"
+  },
+  "modifications": [
+    {
+      "original": "max_iters=5000, eval_interval=500, eval_iters=200",
+      "teaching": "max_iters=12, eval_interval=6, eval_iters=3",
+      "reason": "几秒跑完整循环看结构与 loss 汇报，不做长训练。"
+    }
+  ],
+  "checkpoints": [
+    "estimate_loss 自动切换 eval/train 模式",
+    "最后一步必打印 loss",
+    "训练循环正常结束"
+  ],
+  "glossary": [
+    {
+      "term": "eval 模式",
+      "explanation": "model.eval() 关闭 dropout 等训练专用行为，使评估稳定。"
+    },
+    {
+      "term": "训练/验证损失",
+      "explanation": "分别在训练集和留出集上算的误差，用来观察过拟合。"
+    }
+  ]
+}

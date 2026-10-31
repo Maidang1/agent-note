@@ -1,0 +1,11 @@
+# 14 把输入拆成 B/T/C，算出 query·key 的亲密度矩阵 (debug)  exit=1 3641ms PASS=True
+--- stdout ---
+q 形状 (2, 5, 8)  k 形状 (2, 5, 8)
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 9, in <module>
+    wei = q @ k   # 忘了 transpose，直接让 q 和 k 相乘
+          ~~^~~
+RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [2, 8] but got: [2, 5].
+

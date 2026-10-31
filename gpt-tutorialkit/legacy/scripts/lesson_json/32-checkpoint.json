@@ -1,0 +1,117 @@
+{
+  "id": "32",
+  "order": 32,
+  "module": "训练GPT",
+  "title": "扩展对比：Bigram 与 GPT 参数量，以及独立的权重存档与读取（非原版）",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 61,
+      "end": 96,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L61-L96"
+    },
+    {
+      "file": "gpt.py",
+      "start": 198,
+      "end": 201,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L198-L201"
+    }
+  ],
+  "goal": "对比 Bigram 与 GPT 的参数量，并学会独立保存/加载 state_dict——这是原版没有做的工程扩展。",
+  "prerequisites": [
+    "31"
+  ],
+  "explanation": [
+    "到这里原版 gpt.py 的有效代码就走完了。这节是明确标注的非原版扩展：原版从头到尾不存权重，关掉程序训练就白费。右侧补两件事——先对比 Bigram 和 GPT 的参数量，再演示怎么把权重存盘、再读回来。",
+    "Bigram 只有一张 (65,65) 的查表，参数就是 65×65=4225 个；GPT 在轻量配置下有 token/position 两张查表、2 层 Block 和 lm_head，共 29761 个参数，约是 Bigram 的 7 倍。这个倍数直观说明 GPT 多出来的部件都有代价。",
+    "存档用 PyTorch 标准做法：torch.save(model.state_dict(), 路径) 只存“参数名→数字”的字典；再 new 一个同结构模型 load_state_dict 就能原样装回。右侧把 GPT 权重存到系统临时目录、读进一个新模型 gpt2，逐项比较所有参数是否完全相等，最后删掉临时文件。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "分别装入两套原版",
+      "explanation": "第1行引入工具，第2行导入临时文件和操作系统模块；第3、4行分别 load_original('gpt') 和 load_original('bigram')，得到两个独立收纳盒 ng、nb；第5行取 torch。两次调用互相独立、权重不共享。"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "title": "各造一个模型",
+      "explanation": "第6行造 GPT 模型 gpt 并搬到设备；第7行从 nb 取出 BigramLanguageModel，传入 nb['vocab_size']=65 造出 bi。注意 Bigram 类需要你告诉它词表大小，GPT 类不用（它直接读 ns 里的全局超参）。"
+    },
+    {
+      "start": 8,
+      "end": 12,
+      "title": "数参数并比倍数",
+      "explanation": "第8、9行分别数两个模型的参数总数；第10、11行打印 Bigram=4225（正好是 65×65）、GPT=29761；第12行打印倍数约 7.0x。"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "title": "把 GPT 权重存盘",
+      "explanation": "第13行用 tempfile.gettempdir() 拼出一个系统临时文件路径；第14行 torch.save(gpt.state_dict(), tmp) 把所有参数写成一个文件；第15行打印路径。state_dict 只是参数字典，不含模型结构本身。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "新模型原样装回并核对",
+      "explanation": "第16行再 new 一个全新的 GPT gpt2；第17行 torch.load 读回文件、load_state_dict 把参数填进去；第18行用 zip 把新旧模型的参数一一配对、torch.equal 逐块比较，all() 收成一个 True/False；第19行打印，应为 True。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "断言并清理",
+      "explanation": "第20行 assert same 确认存档读回完全一致；第21行 os.remove 删掉临时文件，不在磁盘上留垃圾。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 61,
+      "end": 66,
+      "explanation": "Bigram 仅靠 token_embedding_table 查表，参数量 = vocab_size*vocab_size。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 198,
+      "end": 201,
+      "explanation": "GPT 实例化后统计参数；参数量远大于 Bigram，因为多了 embedding、多层 Block 与 lm_head。"
+    }
+  ],
+  "input": "观察两模型参数量；临时文件路径自动生成，无需手动指定。",
+  "expected": "打印 Bigram 与 GPT 参数量；保存再加载后参数逐项相等（True）。",
+  "code": "from tutorial_runtime import load_original\nimport tempfile, os\nng = load_original('gpt')\nnb = load_original('bigram')\ntorch = ng['torch']\ngpt = ng['GPTLanguageModel']().to(ng['device'])\nbi = nb['BigramLanguageModel'](nb['vocab_size']).to(nb['device'])\ngp = sum(p.numel() for p in gpt.parameters())\nbp = sum(p.numel() for p in bi.parameters())\nprint('Bigram 参数量:', bp)\nprint('GPT 参数量:', gp)\nprint('GPT/Bigram 倍数: %.1fx' % (gp / max(bp,1)))\ntmp = os.path.join(tempfile.gettempdir(), 'gpt_ckpt.pt')\ntorch.save(gpt.state_dict(), tmp)\nprint('已保存权重到:', tmp)\ngpt2 = ng['GPTLanguageModel']().to(ng['device'])\ngpt2.load_state_dict(torch.load(tmp, map_location=ng['device']))\nsame = all(bool(torch.equal(a, b)) for a, b in zip(gpt.parameters(), gpt2.parameters()))\nprint('重新加载后参数一致:', same)\nassert same\nos.remove(tmp)\n",
+  "exercise": {
+    "instruction": "保存 Bigram 权重到另一个临时文件，再新建 Bigram 加载，验证同样成立。",
+    "hint": "torch.save(bi.state_dict(), ...) 后 bi2.load_state_dict(...)。",
+    "solution": "两个模型存档机制相同，加载后参数逐项相等。"
+  },
+  "debug": {
+    "instruction": "把 GPT 的权重错装进 Bigram，观察 load_state_dict 报键不匹配。",
+    "code": "from tutorial_runtime import load_original\nimport tempfile, os\nng = load_original('gpt')\nnb = load_original('bigram')\ntorch = ng['torch']\ngpt = ng['GPTLanguageModel']().to(ng['device'])\nbi = nb['BigramLanguageModel'](nb['vocab_size']).to(nb['device'])\nbi.load_state_dict(gpt.state_dict())\n",
+    "expectedError": "RuntimeError",
+    "fix": "state_dict 的键必须与目标模型结构一致；不能跨架构加载。"
+  },
+  "modifications": [
+    {
+      "original": "原版不保存权重，more.txt 仅临时样本",
+      "teaching": "增加 state_dict 保存/加载与 Bigram 对比",
+      "reason": "工程上必须会存档；已明确标注为非原版扩展。"
+    }
+  ],
+  "checkpoints": [
+    "Bigram 与 GPT 参数量差距可观察",
+    "权重保存再加载后逐项相等",
+    "跨架构 load 会报错"
+  ],
+  "glossary": [
+    {
+      "term": "state_dict",
+      "explanation": "模型所有可训练参数组成的字典，是 PyTorch 标准存档内容。"
+    },
+    {
+      "term": "load_state_dict",
+      "explanation": "把已存参数填回同结构模型，完成恢复。"
+    }
+  ]
+}

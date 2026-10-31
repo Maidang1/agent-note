@@ -1,0 +1,24 @@
+# 03 字符和整数的互转：stoi/encode/decode (default)  exit=0 3586ms PASS=True
+--- stdout ---
+vocab_size = 65
+字符表前10个: "\n !$&',-.3"
+stoi 样例: 空格= 1  换行= 0  字母e= 43
+itos 样例: 0 -> '\n'  1 -> ' '
+encode('All: speak.') = [13, 50, 50, 10, 1, 57, 54, 43, 39, 49, 8]
+逐字符对照:
+    'A' -> 13
+    'l' -> 50
+    'l' -> 50
+    ':' -> 10
+    ' ' -> 1
+    's' -> 57
+    'p' -> 54
+    'e' -> 43
+    'a' -> 39
+    'k' -> 49
+    '.' -> 8
+decode 回原文 = 'All: speak.'
+往返一致: True
+
+--- stderr ---
+

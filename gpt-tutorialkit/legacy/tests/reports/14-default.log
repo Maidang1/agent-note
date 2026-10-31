@@ -1,0 +1,12 @@
+# 14 把输入拆成 B/T/C，算出 query·key 的亲密度矩阵 (default)  exit=0 3697ms PASS=True
+--- stdout ---
+输入 x 形状 (B,T,C) = (2, 5, 32)  batch= 2  时间步= 5  特征宽度 C= 32
+key(x)   形状 = (2, 5, 8)   # (B,T,head_size)
+query(x) 形状 = (2, 5, 8)
+k.transpose(-2,-1) 形状 = (2, 8, 5)   # 把最后两维互换
+q @ k.transpose(-2,-1) 形状 = (2, 5, 5)   # (B,T,hs)@(B,hs,T) -> (B,T,T)
+矩阵乘规则: 最后一维 hs= 8 必须匹配; 结果两个时间维都是 T= 5
+OK
+
+--- stderr ---
+

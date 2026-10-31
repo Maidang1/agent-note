@@ -1,0 +1,16 @@
+# 09 generate：softmax抽一个字符再接回去循环 (default)  exit=0 3329ms PASS=True
+--- stdout ---
+初始上下文: [[0]] 解码= '\n'
+第0步: 结尾='\n' 最高分='p'(0.120) 抽到='S'
+第1步: 结尾='S' 最高分='P'(0.187) 抽到='K'
+第2步: 结尾='K' 最高分='u'(0.093) 抽到='I'
+第3步: 结尾='I' 最高分='o'(0.068) 抽到='c'
+第4步: 结尾='c' 最高分='L'(0.092) 抽到='L'
+手动循环结果: '\nSKIcL'
+generate(20) 输出: '\nT;AcELMoTbvZv C?nq-Q'
+注意: 模型尚未训练，输出近似随机字符，不代表英文质量。
+
+--- stderr ---
+<string>:16: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+

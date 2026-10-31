@@ -1,0 +1,112 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CourseSidebar from '../components/CourseSidebar.astro';
+import { lessons, originalLines, SOURCE_URL, type LessonMeta, type SourceFile } from '../lib/course';
+
+// 每一行归属到「覆盖它且范围最小」的那一课（结业课覆盖整份文件，只在没有更具体的课时兜底）；空行跟随上一段。
+type Segment = { lesson?: LessonMeta; start: number; lines: string[] };
+
+function segments(file: SourceFile): Segment[] {
+  const lines = originalLines(file);
+  const owner = lines.map((_, i) => {
+    const n = i + 1;
+    let best: { lesson: LessonMeta; span: number } | undefined;
+    for (const lesson of lessons) {
+      for (const r of lesson.refs) {
+        if (r.file === file && r.start <= n && n <= r.end) {
+          const span = r.end - r.start;
+          if (!best || span < best.span) best = { lesson, span };
+        }
+      }
+    }
+    return best?.lesson;
+  });
+  const out: Segment[] = [];
+  owner.forEach((lesson, i) => {
+    const last = out[out.length - 1];
+    // 空行并入上一段，免得类与类之间的空行被单独切成一段
+    if (last && (last.lesson?.id === lesson?.id || !lines[i].trim())) last.lines.push(lines[i]);
+    else out.push({ lesson, start: i + 1, lines: [lines[i]] });
+  });
+  return out;
+}
+
+const files: { file: SourceFile; anchor: string; intro: string }[] = [
+  { file: 'gpt.py', anchor: 'gpt', intro: '整门课的终点。每一块代码旁边标着是哪一课亲手写的；做完的课会变成实色。' },
+  { file: 'bigram.py', anchor: 'bigram', intro: '模块 2–3 先在这份更短的文件上把「数据 → 模型 → 训练 → 生成」走通。' },
+];
+---
+<Layout title="源码地图 · 手写 GPT">
+  <div class="lesson-shell map-shell">
+    <CourseSidebar current="map" />
+    <main class="map-main" id="main-content" tabindex="-1">
+      <header class="map-header">
+        <h1>源码地图</h1>
+        <p class="muted">karpathy/ng-video-lecture 的两份原版文件，逐行对应到课程。做完一课，对应的代码块就会点亮。</p>
+        <div class="map-stats" data-map-stats>
+          {files.map((f) => (
+            <div class="card stat" data-stat-file={f.file}>
+              <div class="stat-label mono">{f.file}</div>
+              <div class="stat-value"><span data-stat-done>0</span><span class="muted"> / <span data-stat-total>0</span> 行已亲手写过</span></div>
+            </div>
+          ))}
+        </div>
+      </header>
+
+      {files.map(({ file, anchor, intro }) => (
+        <section class="map-file" aria-labelledby={`${anchor}-title`}>
+          <div class="map-file-head">
+            <h2 id={`${anchor}-title`} class="mono">{file}</h2>
+            <a href={`${SOURCE_URL}/${file}`} target="_blank" rel="noreferrer" class="btn btn-ghost btn-sm">在 GitHub 打开 ↗</a>
+          </div>
+          <p class="muted">{intro}</p>
+          <div class="map-code card" data-map-file={file}>
+            {segments(file).map((seg) => (
+              <div class="map-seg" data-lesson={seg.lesson?.id ?? ''}>
+                <pre>{seg.lines.map((line, i) => (
+                  <span class="map-line" id={`${anchor}-${seg.start + i}`}><span class="ln">{seg.start + i}</span>{line}</span>
+                ))}</pre>
+                {seg.lesson && (
+                  <a class="map-tag" href={`/${seg.lesson.slug}`}>
+                    <span class="lesson-mark" aria-hidden="true"></span>{seg.lesson.order}. {seg.lesson.title}
+                  </a>
+                )}
+              </div>
+            ))}
+          </div>
+        </section>
+      ))}
+    </main>
+  </div>
+</Layout>
+
+<script>
+  import { getDone, PROGRESS_EVENT } from '../lib/progress';
+
+  function paint() {
+    document.querySelectorAll<HTMLElement>('[data-map-file]').forEach((box) => {
+      let done = 0;
+      let total = 0;
+      box.querySelectorAll<HTMLElement>('.map-seg').forEach((seg) => {
+        const id = seg.dataset.lesson;
+        const d = id ? getDone(id) : null;
+        seg.dataset.state = !id ? 'none' : d ? 'done' : 'todo';
+        if (id) {
+          const n = [...seg.querySelectorAll('.map-line')].filter((l) => l.textContent!.replace(/^\d+/, '').trim()).length;
+          total += n;
+          if (d) done += n;
+        }
+      });
+      const stat = document.querySelector<HTMLElement>(`[data-stat-file="${box.dataset.mapFile}"]`);
+      if (stat) {
+        stat.querySelector('[data-stat-done]')!.textContent = String(done);
+        stat.querySelector('[data-stat-total]')!.textContent = String(total);
+      }
+    });
+    const target = location.hash && document.querySelector<HTMLElement>(location.hash);
+    if (target) target.classList.add('map-line-target');
+  }
+  paint();
+  window.addEventListener(PROGRESS_EVENT, paint);
+  window.addEventListener('storage', paint);
+</script>

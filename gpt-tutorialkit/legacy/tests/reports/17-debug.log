@@ -1,0 +1,11 @@
+# 17 Dropout 在 train 和 eval 下行为完全不同 (debug)  exit=1 3761ms PASS=True
+--- stdout ---
+dropout=1.0 后元素和 = 0.0
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    assert y.sum().item() > 0, '所有元素都被丢弃，后续加权平均会变成全 0'
+           ^^^^^^^^^^^^^^^^^^
+AssertionError: 所有元素都被丢弃，后续加权平均会变成全 0
+

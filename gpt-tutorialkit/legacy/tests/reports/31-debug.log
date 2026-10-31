@@ -1,0 +1,14 @@
+# 31 从零字符生成：原版没包 no_grad、也没 eval，别期待通顺 (debug)  exit=1 4471ms PASS=True
+--- stdout ---
+词表最大编号是 64
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 4, in <module>
+    print(ns['decode']([999999]))
+          ~~~~~~~~~~~~^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/gpt.py", line 32, in <lambda>
+    decode = lambda l: ''.join([itos[i] for i in l]) # decoder: take a list of integers, output a string
+                                ~~~~^^^
+KeyError: 999999
+

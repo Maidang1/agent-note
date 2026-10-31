@@ -1,0 +1,13 @@
+# 04 把整数列表变成张量，并切出训练/验证两段 (default)  exit=0 3554ms PASS=True
+--- stdout ---
+data 类型: Tensor
+data dtype: torch.int64 (long/int64 才能做 Embedding 的下标)
+data 元素总数: 1115394 = 语料字符总数 1115394
+切分点 n = 1003854 (前90%为训练段)
+train_data 长度: 1003854  val_data 长度: 111540
+两段比例 train:val = 0.9 : 0.1
+训练段结尾10字: 'comes here'
+验证段开头10字: '?\n\nGREMIO:'
+
+--- stderr ---
+

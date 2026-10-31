@@ -1,0 +1,18 @@
+# 07 forward：查表得到logits，带不带targets算两种事 (debug)  exit=1 3266ms PASS=True
+--- stdout ---
+不小心只给了第一列做target，形状: (4, 1)
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 8, in <module>
+    logits, loss = model(xb, bad_targets)
+                   ~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/bigram.py", line 78, in forward
+    targets = targets.view(B*T)
+RuntimeError: shape '[32]' is invalid for input of size 4
+

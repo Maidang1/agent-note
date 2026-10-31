@@ -1,0 +1,10 @@
+# 27 有没有答案算两种账：targets 分支与交叉熵 (default)  exit=0 4893ms PASS=True
+--- stdout ---
+带targets 返回 logits: (16, 65) (B*T,C) = 16 x 65
+loss: 4.162445068359375
+不带targets 返回 logits: (2, 8, 65) (B,T,C)
+不带targets loss = None
+随机猜测参考 -ln(1/vocab)= 4.174
+
+--- stderr ---
+

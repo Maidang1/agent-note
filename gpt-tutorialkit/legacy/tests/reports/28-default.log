@@ -1,0 +1,9 @@
+# 28 一个字一个字往外蹦：generate 的循环与上下文裁剪 (default)  exit=0 4674ms PASS=True
+--- stdout ---
+输入上下文长度: 38  block_size= 8
+裁剪后进入forward长度: 8
+生成后总长: 48 (原长 + 10)
+新增长度: 10
+
+--- stderr ---
+

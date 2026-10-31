@@ -1,0 +1,11 @@
+# 20 FeedFoward：先扩 4 维、加非线性、再压回来 (default)  exit=0 3831ms PASS=True
+--- stdout ---
+输入形状 = (2, 5, 32)
+Linear(32, 4*32) 后形状 = (2, 5, 128)   # 先扩到 4 倍
+ReLU 后负数被压成 0 的比例 = 0.454
+第二个 Linear 收回形状 = (2, 5, 32)
+FeedFoward 输出形状 = (2, 5, 32)
+OK
+
+--- stderr ---
+

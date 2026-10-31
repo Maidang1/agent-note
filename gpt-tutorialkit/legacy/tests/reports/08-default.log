@@ -1,0 +1,14 @@
+# 08 摊平view与交叉熵：手算概率对照模型损失 (default)  exit=0 3079ms PASS=True
+--- stdout ---
+位置(0,0): 当前字符=',' 要预测的下一个='\n'
+该位置 logits 前5个: [0.416, 0.336, -0.451, -0.7, 0.921]
+手算概率和 = 1.0  softmax参考和 = 1.0
+手算/参考 概率最大差 = 1.4901161193847656e-08
+正确字符概率: 手算=0.012383 参考=0.012383
+手算该位置交叉熵 -log(p[正确]) = 4.391432
+全批 F.cross_entropy = 4.705135 (forward里loss) = 4.705135
+
+--- stderr ---
+<string>:16: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+

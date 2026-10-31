@@ -1,0 +1,29 @@
+{
+  "artifact": "launcher-final-verdict",
+  "reviewed_file": "gpt-tutorialkit/launcher.py",
+  "source_checks": {
+    "venv_identity_absolute_not_resolve": "PASS - resolve_python() uses Path(...).absolute(), no .resolve() on venv/bin/python; backend argv shows ../.tutorial-venv/bin/python preserved",
+    "own_groups_recorded_at_spawn": "PASS - line 44 own_groups.append(p.pid) after start_new_session=True",
+    "unconditional_group_kill": "PASS - stop_children SIGTERM-round (line 51-55) and SIGKILL-round (line 65-69) iterate own_groups with no poll() guard; ProcessLookupError-only catch",
+    "no_broad_kill": "PASS - no pkill/lsof/port-scan; only recorded pgids targeted",
+    "run_sh_exec_only": "PASS (verified earlier)"
+  },
+  "live_tests": {
+    "leader_exits_first": {
+      "result": "PASS",
+      "method": "SIGKILL npm leader 53971 while node astro 54011 + esbuild 54049 alive in its pgid; launcher waitpid-poll loop detected child death -> finally stop_children() -> printed '已停止全部由本启动器创建的进程组'; launcher exit=0",
+      "after": "no gpt-tutorialkit processes; 8765/4321 both released"
+    },
+    "sigterm_to_launcher": {
+      "result": "NOT_VERIFIABLE_IN_SANDBOX",
+      "evidence": [
+        "os.kill(SIGTERM) to real launcher -> 10s no exit, sample stack parked in nanosleep/__semwait_signal, no handler entry, children/orphan ports survived",
+        "control: trivial 5-line python SIGTERM handler child also did NOT fire 8s under identical os.kill from Bash-tool-spawned python",
+        "conclusion: signal delivery from sandbox-spawned test processes does not reach child Python handlers in this environment; this is environmental, not a launcher defect. Do not claim Ctrl-C verified."
+      ]
+    }
+  },
+  "residue": "CLEAN - all test process groups killed; ports released",
+  "final": "launcher source ACCEPT (no over-reach, venv path preserved, recorded-pgid unconditional cleanup); leader-exits-first orphan cleanup PASS by deterministic waitpid path; SIGTERM/Ctrl-C path not measured here, same killpg logic would apply but is source-level only.",
+  "scripts": ["scratch/leader_exit_test2.py", "scratch/min_sigterm.py", "scratch/sigterm_diag.py"]
+}

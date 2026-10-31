@@ -1,0 +1,26 @@
+---
+import '@tutorialkit/custom.css';
+import '../styles/base.css';
+
+interface Props {
+  title: string;
+}
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script is:inline>
+      window.__RUNNER_API__ = 'http://127.0.0.1:8765';
+    </script>
+  </head>
+  <body>
+    <a href="#main-content" class="skip-link">跳到正文</a>
+    <slot />
+  </body>
+</html>

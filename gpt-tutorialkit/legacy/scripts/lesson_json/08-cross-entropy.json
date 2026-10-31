@@ -1,0 +1,145 @@
+{
+  "id": "08",
+  "order": 8,
+  "module": "数据与Bigram",
+  "title": "摊平view与交叉熵：手算概率对照模型损失",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 73,
+      "end": 81,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L73-L81"
+    }
+  ],
+  "goal": "亲手用指数算出softmax概率，再算一次 -log(正确概率)，和F.cross_entropy对得上。",
+  "prerequisites": [
+    "07"
+  ],
+  "explanation": [
+    "logits是原始打分，不能直接当概率。softmax把任意分数变成\"加起来等于1\"的概率：每个分数先取指数e^z，再除以全部指数之和。为了防止分数大时e^z溢出，先减去该向量的最大值——比值不变但数值更稳定。",
+    "交叉熵衡量\"在正确答案上压中了多少概率\"：模型给正确字符的概率是p，损失就是-log(p)，p接近1时损失接近0，p很小则损失很大。一个batch有B×T个独立位置，F.cross_entropy对它们求平均。右侧挑第0段第0个位置，亲手算softmax和-log(p[正确])，再和PyTorch的F.softmax/F.cross_entropy并排打印。",
+    "本节观察：手算概率和应≈1，手算与库函数最大误差小于1e-5；手算单位置损失和全批平均loss对得上——损失不再是黑箱。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 7,
+      "title": "让辅助工具准备好模型和一批数据，先拿到forward的loss",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns。第3行取出torch和F（F是torch.nn.functional，里面有softmax和cross_entropy）。第4行取出本次B/T/V。第5行实例化模型并搬到设备。第6行抽一批train数据。第7行model(xb,yb)跑一次forward，返回logits和全批平均loss——这个loss是forward内部用F.cross_entropy算出来的。"
+    },
+    {
+      "start": 8,
+      "end": 12,
+      "title": "挑定一个位置，取出它的打分行和标准答案",
+      "explanation": "第8行直接查表得到(B,T,V)张量，取[0,0]——第0段第0个位置——得到一行V个打分，记为row。第9行从yb取出该位置要预测的下一个字符编号target。第10-11行把当前字符和目标字符decode成文字打印出来。第12行打印row前5个原始打分。注意这行row就是forward内部查表得到的那一行。"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "title": "亲手算softmax，再让PyTorch算一遍参考",
+      "explanation": "第13行row - row.max()先减去这一行的最大值（数值稳定，比值不变），再取指数e^z得到e。第14行e除以e.sum()归一，得到手算概率p。第15行用F.softmax(row, dim=-1)让PyTorch算一遍参考p_ref。两步做同一件事，后面用来互相对照。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "对照概率和正确字符的损失",
+      "explanation": "第16行打印手算概率之和与参考概率之和，都应≈1。第17行打印手算与参考逐位相减的最大差，应非常小。第18行取出p[target]和p_ref[target]——模型给\"正确下一个字符\"的概率——两者应一致。第19行算-log(p[target])，这就是单个位置的交叉熵：模型在正确字符上压中的概率越低，这个数越大。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "全批交叉熵与forward里的loss并排",
+      "explanation": "第20行右侧自己再调一次F.cross_entropy：先查表得到(B,T,V)、reshape摊成(B*T,V)，yb也reshape成(B*T,)，算全批平均ce_ref。第21行打印ce_ref和第7行forward返回的loss，两者应几乎相等——这证明forward内部那一步算的就是这个。"
+    },
+    {
+      "start": 22,
+      "end": 23,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第22行检查手算softmax与F.softmax最大差小于1e-5，第23行检查自己算的ce_ref与forward里的loss差小于1e-4。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 73,
+      "end": 74,
+      "explanation": "if targets is None是推理/生成分支：不摊平不算损失，直接令loss=None返回。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 75,
+      "end": 75,
+      "explanation": "else是有监督分支：只有给了标准答案targets，才进入下面的摊平与交叉熵计算。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 76,
+      "end": 76,
+      "explanation": "从logits.shape解包B,T,C，知道一共有B*T条独立打分向量。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 77,
+      "end": 77,
+      "explanation": "view(B*T,C)把三维打分摊成二维表：每行一个位置、C个类别分数。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 78,
+      "end": 78,
+      "explanation": "targets.view(B*T)把标准答案摊成一列，与上面每行对齐。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 79,
+      "end": 79,
+      "explanation": "F.cross_entropy对所有位置算交叉熵并求平均，返回标量loss。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 81,
+      "end": 81,
+      "explanation": "return logits, loss把两种分支结果一并返回；无targets时loss为None。"
+    }
+  ],
+  "input": "观察手算softmax与F.softmax的差、手算交叉熵与F.cross_entropy的差。",
+  "expected": "打印某位置logits、手算概率和、softmax参考、二者最大误差、正确字符概率与 -log(p)；手算平均与库函数一致（误差<1e-4）。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch, F = ns['torch'], ns['F']\nB, T, V = ns['batch_size'], ns['block_size'], ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V).to(ns['device'])\nxb, yb = ns['get_batch']('train')\nlogits, loss = model(xb, yb)\nrow = model.token_embedding_table(xb)[0, 0]\ntarget = int(yb[0, 0])\nprint('位置(0,0): 当前字符=%r 要预测的下一个=%r' % (\n    ns['decode']([int(xb[0, 0])]), ns['decode']([target])))\nprint('该位置 logits 前5个:', [round(x, 3) for x in row[:5].tolist()])\ne = torch.exp(row - row.max())\np = e / e.sum()\np_ref = F.softmax(row, dim=-1)\nprint('手算概率和 =', round(float(p.sum()), 6), ' softmax参考和 =', round(float(p_ref.sum()), 6))\nprint('手算/参考 概率最大差 =', float((p - p_ref).abs().max()))\nprint('正确字符概率: 手算=%.6f 参考=%.6f' % (float(p[target]), float(p_ref[target])))\nprint('手算该位置交叉熵 -log(p[正确]) = %.6f' % float(-torch.log(p[target])))\nce_ref = F.cross_entropy(model.token_embedding_table(xb).reshape(B*T, V), yb.reshape(B*T))\nprint('全批 F.cross_entropy = %.6f (forward里loss) = %.6f' % (ce_ref.item(), loss.item()))\nassert float((p - p_ref).abs().max()) < 1e-5\nassert abs(loss.item() - ce_ref.item()) < 1e-4\n",
+  "exercise": {
+    "instruction": "把观察位置从(0,0)改成(0,3)：row取[0,3]、target取yb[0,3]，再跑一遍。",
+    "hint": "位置从0数起，T=8所以第3位合法。",
+    "solution": "手算概率仍与F.softmax吻合，正确字符概率随位置变化。"
+  },
+  "debug": {
+    "instruction": "故意只保留logits前5类，而target可能指到60多类，观察交叉熵下标越界。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nF = ns['F']\nV = ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V).to(ns['device'])\nxb, yb = ns['get_batch']('train')\nfull = model.token_embedding_table(xb)\nbroken = full[:, :, :5]\nB, T, C = broken.shape\nprint('broken 类别数 C =', C, '但 targets 最大可能是', int(yb.max()))\nF.cross_entropy(broken.reshape(B*T, C), yb.reshape(B*T))\n",
+    "expectedError": "IndexError",
+    "fix": "交叉熵的类别维C必须等于词表大小，target编号不能越界；不要截断最后一维。"
+  },
+  "modifications": [
+    {
+      "original": "原版直接调F.cross_entropy不展开内部",
+      "teaching": "本步手算softmax和 -log(p) 与库函数对照",
+      "reason": "无ML基础者需要看到损失是怎么算出来的。"
+    }
+  ],
+  "checkpoints": [
+    "手算概率和≈1",
+    "手算与F.softmax误差<1e-5",
+    "手算平均与F.cross_entropy一致"
+  ],
+  "glossary": [
+    {
+      "term": "softmax",
+      "explanation": "把原始打分变成和为1的概率分布。"
+    },
+    {
+      "term": "交叉熵",
+      "explanation": "-log(正确类概率)，对所有位置求平均；越小越好。"
+    },
+    {
+      "term": "view/展平",
+      "explanation": "把(B,T,C)重塑成(B*T,C)，让每个位置独立算损失。"
+    }
+  ]
+}

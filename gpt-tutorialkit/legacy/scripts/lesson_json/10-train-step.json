@@ -1,0 +1,162 @@
+{
+  "id": "10",
+  "order": 10,
+  "module": "训练",
+  "title": "一次训练四步曲：zero_grad/backward/step，参数真的变了",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 98,
+      "end": 118,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L98-L118"
+    }
+  ],
+  "goal": "把模型搬到设备、建AdamW优化器，跑一次反向传播，并亲眼确认权重发生了变化。",
+  "prerequisites": [
+    "07",
+    "08"
+  ],
+  "explanation": [
+    "前面模型和损失都准备好了，但参数还是随机初始值。真正让模型\"学习\"的是优化器。右侧实例化模型搬到设备、建AdamW优化器（拿到全部可训练参数、按学习率lr决定每步怎么改），然后跑一次完整训练四步：抽一批→算loss→zero_grad清零→backward算梯度→step更新参数。",
+    "怎么确认参数真的变了？更新前先clone一份权重w_before，step后再取w_after相减，打印最大变化量必须>0。同时看backward后梯度grad非空、范数非零。再连跑3小步看loss。",
+    "短训练不保证loss下降趋势，但梯度范数非零、权重有变化，就说明训练管道通了。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 7,
+      "title": "让辅助工具准备好模型，建优化器",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns。第3行取出torch。第4行取出本次device和learning_rate（lr=0.01）。第5行实例化模型并.to(device)搬到计算设备。第6行torch.optim.AdamW(model.parameters(), lr=lr)建优化器：它拿到全部可训练参数，按lr决定每步怎么改；优化器本身不存数据，只记录参数和状态。第7行打印学习率和参数组数量。"
+    },
+    {
+      "start": 8,
+      "end": 11,
+      "title": "备份初始权重，抽一批数据算loss",
+      "explanation": "第8行detach().clone()把当前Embedding权重复制一份存成w_before——后面用来和更新后的权重比较。第9行get_batch('train')抽一批。第10行model(xb,yb)前向算logits和loss。第11行打印更新前loss。"
+    },
+    {
+      "start": 12,
+      "end": 16,
+      "title": "一次训练四步：清零→反向→更新",
+      "explanation": "第12行optimizer.zero_grad(set_to_none=True)把上次残留梯度清零——梯度默认会累加，不清会叠错。第13行loss.backward()反向传播，自动算出每个参数该往哪调（梯度）。第14行取出Embedding权重的梯度g。第15行打印梯度范数和非空判断。第16行optimizer.step()真正按梯度和学习率更新参数。这四步（zero_grad→backward→step，加前面的前向）就是一次训练。"
+    },
+    {
+      "start": 17,
+      "end": 19,
+      "title": "比较权重前后，确认参数真的变了",
+      "explanation": "第17行再取一次更新后的权重w_after。第18行两者相减取绝对值得到diff。第19行打印diff里最大的那个数，它必须>0——如果等于0说明step没改任何参数，管道没通。"
+    },
+    {
+      "start": 20,
+      "end": 26,
+      "title": "再连跑3小步看loss",
+      "explanation": "第20行for循环再跑3次完整训练。第21行重新抽一批，第22行前向算loss（下划线_不要logits），第23-25行重复zero_grad→backward→step，第26行打印每步loss。短训练不保证loss单调下降，但梯度非零就说明在学。"
+    },
+    {
+      "start": 27,
+      "end": 28,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第27行检查权重最大变化>0，第28行检查梯度g非空。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 98,
+      "end": 99,
+      "explanation": "实例化BigramLanguageModel(vocab_size)，再.to(device)把参数搬到计算设备。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 102,
+      "end": 102,
+      "explanation": "AdamW优化器接管model.parameters()，lr=learning_rate；它知道每个参数该怎么更新。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 104,
+      "end": 104,
+      "explanation": "for iter in range(max_iters)是主训练循环；本步只拆开循环体里一次完整四步，循环整体在12步串讲。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 107,
+      "end": 109,
+      "explanation": "每隔eval_interval步调estimate_loss并打印train/val；estimate_loss本身在11步详解。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 112,
+      "end": 112,
+      "explanation": "每轮从训练集抽一批xb,yb。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 115,
+      "end": 115,
+      "explanation": "前向算logits和loss。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 116,
+      "end": 116,
+      "explanation": "zero_grad(set_to_none=True)把旧梯度清零，否则会和新梯度累加。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 117,
+      "end": 117,
+      "explanation": "loss.backward()反向传播，为每个参数算出梯度。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 118,
+      "end": 118,
+      "explanation": "optimizer.step()按梯度和学习率真正更新参数。"
+    }
+  ],
+  "input": "观察权重前后差、梯度范数和连续几步的loss数值。",
+  "expected": "打印优化器学习率、更新前loss、梯度范数、step后权重最大变化(>0)、3小步loss；断言权重变化>0且梯度非空。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\ndevice, lr = ns['device'], ns['learning_rate']\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(device)\noptimizer = torch.optim.AdamW(model.parameters(), lr=lr)\nprint('优化器学习率:', lr, ' 参数组数量:', len(optimizer.param_groups))\nw_before = model.token_embedding_table.weight.detach().clone()\nxb, yb = ns['get_batch']('train')\nlogits, loss = model(xb, yb)\nprint('更新前 loss = %.4f' % loss.item())\noptimizer.zero_grad(set_to_none=True)\nloss.backward()\ng = model.token_embedding_table.weight.grad\nprint('梯度已生成: 范数=%.4f 非空=%s' % (g.norm().item(), g is not None))\noptimizer.step()\nw_after = model.token_embedding_table.weight.detach()\ndiff = (w_after - w_before).abs()\nprint('step后权重最大变化 = %.6f (>0 说明参数真被改了)' % diff.max().item())\nfor i in range(3):\n    xb, yb = ns['get_batch']('train')\n    _, loss = model(xb, yb)\n    optimizer.zero_grad(set_to_none=True)\n    loss.backward()\n    optimizer.step()\n    print('第%d小步 loss = %.4f' % (i + 1, loss.item()))\nassert diff.max().item() > 0\nassert g is not None\n",
+  "exercise": {
+    "instruction": "把学习率临时改成0（overrides={\"learning_rate\":0}），再跑一遍，观察权重最大变化变成多少。",
+    "hint": "lr=0时step不动参数。",
+    "solution": "权重最大变化≈0，梯度仍计算但不更新。"
+  },
+  "debug": {
+    "instruction": "在torch.no_grad()里算loss，再对它调backward()，观察没有计算图时反向传播为什么报错。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(ns['device'])\nxb, yb = ns['get_batch']('train')\nwith torch.no_grad():          # 这里不记录计算图\n    _, loss = model(xb, yb)\nprint('loss requires_grad =', loss.requires_grad)\nloss.backward()\n",
+    "expectedError": "RuntimeError",
+    "fix": "backward()只能作用在需要梯度的张量上；要训练就不要在no_grad里算loss，像正课那样直接model(xb,yb)再loss.backward()。"
+  },
+  "modifications": [
+    {
+      "original": "原版在max_iters=3000循环里反复训练",
+      "teaching": "本步只跑1次完整四步+3小步，打印权重前后差",
+      "reason": "让用户确认每个参数真的在动，不启动长训练。"
+    }
+  ],
+  "checkpoints": [
+    "梯度范数非零",
+    "step后权重最大变化>0",
+    "优化器学习率=原版0.01"
+  ],
+  "glossary": [
+    {
+      "term": "反向传播backward",
+      "explanation": "从loss出发自动算出每个参数梯度的过程。"
+    },
+    {
+      "term": "梯度gradient",
+      "explanation": "每个参数往哪个方向调能让loss下降的指示。"
+    },
+    {
+      "term": "AdamW",
+      "explanation": "一种自适应学习率的优化器，按梯度更新参数。"
+    },
+    {
+      "term": "zero_grad",
+      "explanation": "每步训练前清空上一轮梯度，防止累加。"
+    }
+  ]
+}

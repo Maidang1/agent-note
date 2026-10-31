@@ -1,0 +1,45 @@
+# 26 穿过 n_layer 个 Block，最后变成每个字的分数 (debug)  exit=1 3887ms PASS=True
+--- stdout ---
+最后一维故意多1
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    model.blocks(bad)
+    ~~~~~~~~~~~~^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/container.py", line 259, in forward
+    input = module(input)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/gpt.py", line 134, in forward
+    x = x + self.sa(self.ln1(x))
+                    ~~~~~~~~^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/normalization.py", line 228, in forward
+    return F.layer_norm(
+           ~~~~~~~~~~~~^
+        input, self.normalized_shape, self.weight, self.bias, self.eps
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/functional.py", line 2993, in layer_norm
+    return torch.layer_norm(
+           ~~~~~~~~~~~~~~~~^
+        input, normalized_shape, weight, bias, eps, torch.backends.cudnn.enabled
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+RuntimeError: Given normalized_shape=[32], expected input with shape [*, 32], but got input of size[1, 8, 33]
+

@@ -1,0 +1,10 @@
+# 25 forward 起步：把字符向量和位置向量加在一起 (default)  exit=0 3731ms PASS=True
+--- stdout ---
+idx (B,T): (2, 8)
+tok_emb: (2, 8, 32)
+pos_emb: (8, 32)
+x = tok_emb + pos_emb: (2, 8, 32)
+逐元素和校验: True
+
+--- stderr ---
+

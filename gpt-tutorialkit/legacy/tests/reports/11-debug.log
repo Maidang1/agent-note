@@ -1,0 +1,16 @@
+# 11 estimate_loss：no_grad下抽样平均train/val成绩 (debug)  exit=1 3404ms PASS=True
+--- stdout ---
+忘了写 ns[model] = model
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    ns['estimate_loss']()
+    ~~~~~~~~~~~~~~~~~~~^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/utils/_contextlib.py", line 158, in no_grad
+    return func(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/bigram.py", line 49, in estimate_loss
+    model.eval()
+    ^^^^^
+NameError: name 'model' is not defined
+

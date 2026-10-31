@@ -1,0 +1,133 @@
+{
+  "id": "21",
+  "order": 21,
+  "module": "手写GPT自注意力",
+  "title": "Block 的构造：头宽必须整除，并接两个 LayerNorm",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 121,
+      "end": 131,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L121-L131"
+    }
+  ],
+  "goal": "看懂 head_size = n_embd // n_head 的整除约束，并实时观察 LayerNorm 把每个 token 归一化成均值 0、方差 1。",
+  "prerequisites": [
+    "19",
+    "20"
+  ],
+  "explanation": [
+    "Block 是 Transformer 的基本积木：里面装一个多头注意力 sa、一个前馈 ffwd，再加上两个 LayerNorm。构造时第一件事是算 head_size = n_embd // n_head——这里用整数除法，意味着 n_embd 必须能被 n_head 整除，否则最后把多个头拼回来时宽度对不上。",
+    "整体流程：从 ns 取出 n_embd/n_head 算 head_size → 实例化 Block → 把 ln1 用到随机张量上，打印每个 token 的均值和标准差 → 列出 Block 的子模块 → 演示 30//4=7 的整除边界。",
+    "你会看到 head_size=8、32%4==0；ln1 后每个 token 均值≈0、标准差≈1；Block 里有 sa/ffwd/ln1/ln2 四个子模块。Block 本身不改变形状——输入 (B,T,n_embd)，输出还是 (B,T,n_embd)。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具",
+      "explanation": "第1–2行取出 load_original 和 ns。第3行取出 torch。"
+    },
+    {
+      "start": 5,
+      "end": 9,
+      "title": "算 head_size 并检查整除",
+      "explanation": "第5–6行取出 n_embd=32、n_head=4。第7行 head_size = n_embd // n_head = 8，整数除法向下取整。第8行打印三个数，第9行用 n_embd % n_head == 0 核对是否整除。"
+    },
+    {
+      "start": 11,
+      "end": 14,
+      "title": "建 Block 并造输入",
+      "explanation": "第11行 blk = ns['Block'](n_embd, n_head) 实例化一个 Block；它内部会自动建好多头注意力、前馈和两个 LayerNorm。第12行切到 eval。第13–14行造 (2,5,32) 的随机输入 x。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "单独过 ln1 看归一化效果",
+      "explanation": "第16行 y = blk.ln1(x) 取出第一个 LayerNorm 跑一遍。第17–18行沿最后一维算均值和标准差，前 5 个 token 的均值应≈0、std≈1。第19行打印 sa/ffwd/ln1 的类名，确认四个子模块都在。"
+    },
+    {
+      "start": 21,
+      "end": 22,
+      "title": "演示不整除会怎样",
+      "explanation": "第21–22行算 30//4=7，再乘 4 得 28，不等于 30。这是 // 向下取整的“静默浪费”——Python 不报错，但拼回来的宽度比 n_embd 少两维。"
+    },
+    {
+      "start": 23,
+      "end": 24,
+      "title": "assert 自检",
+      "explanation": "第23行硬核对本次配置 n_embd % n_head == 0，第24行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 121,
+      "end": 123,
+      "explanation": "class Block(nn.Module)：Transformer 基本积木；docstring 写明 communication followed by computation（先注意力交流，再前馈消化）。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 124,
+      "end": 127,
+      "explanation": "def __init__(self, n_embd, n_head)：head_size = n_embd // n_head，整数除法要求整除。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 128,
+      "end": 129,
+      "explanation": "self.sa = MultiHeadAttention(n_head, head_size)；self.ffwd = FeedFoward(n_embd)：注意力+前馈两个子模块。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 130,
+      "end": 131,
+      "explanation": "self.ln1 = nn.LayerNorm(n_embd)；self.ln2 = nn.LayerNorm(n_embd)：两个层归一化，分别管注意力前和前馈前。"
+    }
+  ],
+  "input": "改 n_head=2 或 n_head=8，观察 head_size 变化和 n_embd % n_head 是否为 0。",
+  "expected": "打印 head_size、整除判断；ln1 输出每个 token 均值≈0、std≈1；列出 sa/ffwd/ln1 的类名；演示 30//4=7 的整除边界。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\nn_embd = ns['n_embd']\nn_head = ns['n_head']\nhead_size = n_embd // n_head\nprint('n_embd =', n_embd, ' n_head =', n_head, ' head_size = n_embd // n_head =', head_size)\nprint('可整除? ', n_embd % n_head == 0)\n\nblk = ns['Block'](n_embd, n_head)\nblk.eval()\nB, T, C = 2, 5, n_embd\nx = torch.randn(B, T, C)\n\ny = blk.ln1(x)\nprint('ln1 后每个 token 最后一维的均值 ≈', [round(v, 6) for v in y.mean(-1).flatten()[:5].tolist()])\nprint('ln1 后每个 token 最后一维的标准差 ≈', [round(v, 6) for v in y.std(-1, unbiased=False).flatten()[:5].tolist()])\nprint('Block 子模块: sa=', type(blk.sa).__name__, ' ffwd=', type(blk.ffwd).__name__, ' ln1=', type(blk.ln1).__name__)\n\nhs2 = 30 // 4\nprint('若 n_embd=30, n_head=4, head_size =', hs2, ' 拼起来 =', hs2*4, ' != 30')\nassert n_embd % n_head == 0\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 n_embd 改成 30、n_head 改成 4，亲手 new 一个 Block，看 cat 后 28 维与 proj 期望的 30 维怎么妥协。",
+    "hint": "proj 是 Linear(head_size*n_head=28, n_embd=30)，它不报错，但每个头实际只有 7 维。",
+    "solution": "Block 能构造成功，但多头拼接宽度是 28 而不是 30；这是 // 向下取整的“静默浪费”，工程上应保证整除。"
+  },
+  "debug": {
+    "instruction": "把 // 写成 /，head_size 变成 float，看 nn.Linear 拒绝接收浮点维度。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\n# 错误：用 / 而不是 //，head_size 变成 float\nn_embd = ns['n_embd']; n_head = ns['n_head']\nhead_size = n_embd / n_head\nprint('head_size =', head_size, type(head_size).__name__)\nh = ns['Head'](head_size)\n",
+    "expectedError": "TypeError: empty(): argument 'size' must be tuple of ints, but found element of type float",
+    "fix": "维度必须是 int；用 n_embd // n_head 而不是 n_embd / n_head，并保证能整除。"
+  },
+  "modifications": [
+    {
+      "original": "原版 n_embd=384, n_head=6, head_size=64",
+      "teaching": "runtime 为 n_embd=32, n_head=4, head_size=8",
+      "reason": "小配置下整除关系一眼可见。"
+    },
+    {
+      "original": "原版 LayerNorm 在 forward 里才被调用",
+      "teaching": "本步单独取出 ln1 打印归一化统计",
+      "reason": "LayerNorm 的“每个 token 均值0方差1”是必须亲眼看到的不变量。"
+    }
+  ],
+  "checkpoints": [
+    "head_size = n_embd // n_head 且整除",
+    "ln1 后每个 token 均值≈0、std≈1",
+    "Block 子模块四类齐全 sa/ffwd/ln1/ln2"
+  ],
+  "glossary": [
+    {
+      "term": "LayerNorm",
+      "explanation": "对最后一维做均值0方差1归一化，并学缩放/偏移参数。"
+    },
+    {
+      "term": "整除 divisible",
+      "explanation": "a % b == 0；多头拼接宽度必须能拼回 n_embd。"
+    },
+    {
+      "term": "// 整数除法",
+      "explanation": "向下取整的除法，结果一定是 int。"
+    }
+  ]
+}

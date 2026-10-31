@@ -1,0 +1,16 @@
+# 13 Head的构造函数：三个投影、一个下三角掩码、一个dropout (debug)  exit=1 3613ms PASS=True
+--- stdout ---
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 12, in <module>
+    b = BadHead(8)
+  File "<string>", line 8, in __init__
+    self.key = nn.Linear(ns['n_embd'], head_size, bias=False)
+    ^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 2013, in __setattr__
+    raise AttributeError(
+        "cannot assign module before Module.__init__() call"
+    )
+AttributeError: cannot assign module before Module.__init__() call
+

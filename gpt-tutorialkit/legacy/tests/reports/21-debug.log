@@ -1,0 +1,16 @@
+# 21 Block 的构造：头宽必须整除，并接两个 LayerNorm (debug)  exit=1 3748ms PASS=True
+--- stdout ---
+head_size = 8.0 float
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    h = ns['Head'](head_size)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/gpt.py", line 69, in __init__
+    self.key = nn.Linear(n_embd, head_size, bias=False)
+               ~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py", line 109, in __init__
+    torch.empty((out_features, in_features), **factory_kwargs)
+    ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: empty(): argument 'size' (position 1) must be tuple of ints, but found element of type float at pos 0
+

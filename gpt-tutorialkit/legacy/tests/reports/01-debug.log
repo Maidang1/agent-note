@@ -1,0 +1,11 @@
+# 01 先认识运行工具和训练开关 (debug)  exit=1 3574ms PASS=True
+--- stdout ---
+即将创建负维度张量
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 4, in <module>
+    ns['torch'].zeros((-1,8))
+    ~~~~~~~~~~~~~~~~~^^^^^^^^
+RuntimeError: zeros: Dimension size must be non-negative.
+

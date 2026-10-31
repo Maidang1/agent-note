@@ -1,0 +1,16 @@
+# 24 为什么要 _init_weights：开工前把权重摆到好位置 (debug)  exit=1 3409ms PASS=True
+--- stdout ---
+故意传负 std
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 6, in <module>
+    nn.init.normal_(bad.weight, mean=0.0, std=-0.1)
+    ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/init.py", line 298, in normal_
+    return _no_grad_normal_(tensor, mean, std, generator)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/init.py", line 83, in _no_grad_normal_
+    return tensor.normal_(mean, std, generator=generator)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: normal expects std >= 0.0, but found std -0.1
+

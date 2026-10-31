@@ -1,0 +1,11 @@
+# 22 Block forward：预归一化 + 两次残差连接 (debug)  exit=1 3275ms PASS=True
+--- stdout ---
+没加残差时与 Block 真实输出最大差 = 2.9480392932891846
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 9, in <module>
+    assert torch.allclose(out_no_residual, blk(x), atol=1e-5)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+

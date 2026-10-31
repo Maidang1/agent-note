@@ -1,0 +1,12 @@
+# 12 Bigram完整轻量训练循环，加一个生成入口 (default)  exit=0 7436ms PASS=True
+--- stdout ---
+轻量训练: max_iters=12 eval_interval=6 eval_iters=3 device=cpu
+step  0: train 4.6567  val 4.7620
+step  6: train 4.6747  val 4.6262
+训练结束。原版末尾没有 model.eval()，我们也保持 train 模式生成。
+生成输出(短训练，近似随机字符，不代表英文质量):
+'\npZa;AcntVcd,jKDqIFoRFX-h NN:CjH- boToP agmZW?cA fxd,bsVYW\nxsc;AIvoQUNfFlgCEtp&v&'
+注意: 本教程默认不保存权重，运行结束参数即丢失。
+
+--- stderr ---
+

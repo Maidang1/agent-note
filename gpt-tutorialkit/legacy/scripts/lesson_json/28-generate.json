@@ -1,0 +1,133 @@
+{
+  "id": "28",
+  "order": 28,
+  "module": "GPT生成",
+  "title": "一个字一个字往外蹦：generate 的循环与上下文裁剪",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 181,
+      "end": 196,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L181-L196"
+    }
+  ],
+  "goal": "看懂 generate 如何循环预测下一个字，重点理解 idx[:, -block_size:] 的长上下文裁剪。",
+  "prerequisites": [
+    "27"
+  ],
+  "explanation": [
+    "生成是训练的反过来：给一段开头，让模型一个字一个字往后接。generate 内部是一个循环，重复 max_new_tokens 次：每次拿当前上下文跑一次 forward，只看最后一个位置的打分，softmax 成概率后抽一个新字符，再接回序列末尾。",
+    "这节的重点是一行裁剪：idx_cond = idx[:, -block_size:]。位置表只有 8 行（block_size=8），如果喂进去的上下文超过 8 个字符，查位置表就会越界报错。所以每轮只取最后 8 个字符当条件，更早的历史直接丢弃——这正是第25课那个 IndexError 的解法。",
+    "右侧故意造一段 38 个字符的长上下文（8+30），先手动看裁剪后剩几个，再调 generate 生成 10 个字。模型此时是随机初始化的，抽出来的是乱码，但我们只验证流程：总长 = 原长 + 10，且进 forward 的长度永远被裁到 8。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "准备模型并切到评估模式",
+      "explanation": "第1到4行照常取工具、ns、torch、造 model 搬到设备；第5行 model.eval() 关掉 dropout，让本次演示不被随机丢弃干扰。"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "title": "造一段超长上下文",
+      "explanation": "第6行造 (1, 38) 的随机编号长上下文（block_size 8 再加 30）；第7行打印它的长度 38 和 block_size=8，先记住这两个数。"
+    },
+    {
+      "start": 8,
+      "end": 9,
+      "title": "手动裁剪到最后 8 个",
+      "explanation": "第8行 long_ctx[:, -8:] 只保留最后 8 列，更早的 30 个被丢弃；第9行打印裁剪后长度 8。这一步对应 generate 内部每轮循环开头做的事。"
+    },
+    {
+      "start": 10,
+      "end": 10,
+      "title": "循环生成 10 个新字符",
+      "explanation": "第10行 out = model.generate(long_ctx, max_new_tokens=10)。generate 内部每轮都先裁剪、再 forward、取最后一步打分、softmax、multinomial 抽样、cat 接回，重复 10 次。这些内部动作发生在 generate 函数里，右侧没有展开写。"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "title": "核对长度账",
+      "explanation": "第11行打印生成后总长 48（原 38 + 新 10）；第12行打印净增 10。因为模型未训练，具体字符是随机乱码，这里只认长度。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "两条断言",
+      "explanation": "第13行核裁剪后长度等于 block_size=8；第14行核输出总长等于原长加 10。把 max_new_tokens 改成 20 后，净增那一栏会变成 20。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 181,
+      "end": 183,
+      "explanation": "generate 接收当前上下文 idx 和要新生成的字数；循环 max_new_tokens 次。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 185,
+      "end": 185,
+      "explanation": "idx_cond = idx[:, -block_size:]：只保留最后 block_size 个 token，解决长上下文越界。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 187,
+      "end": 189,
+      "explanation": "用裁剪后的条件前向，取最后时刻 logits[:, -1, :] 作为下一步预测。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 191,
+      "end": 193,
+      "explanation": "softmax 得概率，torch.multinomial 抽样一个字符编号。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 195,
+      "end": 196,
+      "explanation": "torch.cat 把新字接到序列末尾，进入下一轮。"
+    }
+  ],
+  "input": "改 max_new_tokens 看序列变长；刻意喂一段比 block_size 长的上下文，观察裁剪。",
+  "expected": "打印输入上下文长度、裁剪后长度、生成后总长度；总长 = 原长 + max_new_tokens。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nmodel.eval()\nlong_ctx = torch.randint(ns['vocab_size'], (1, ns['block_size'] + 30), device=ns['device'])\nprint('输入上下文长度:', long_ctx.shape[1], ' block_size=', ns['block_size'])\nidx_cond = long_ctx[:, -ns['block_size']:]\nprint('裁剪后进入forward长度:', idx_cond.shape[1])\nout = model.generate(long_ctx, max_new_tokens=10)\nprint('生成后总长:', out.shape[1], '(原长 + 10)')\nprint('新增长度:', out.shape[1] - long_ctx.shape[1])\nassert idx_cond.shape[1] == ns['block_size']\nassert out.shape[1] == long_ctx.shape[1] + 10\n",
+  "exercise": {
+    "instruction": "把 max_new_tokens 改成 20，确认新增长度从 10 变成 20。",
+    "hint": "generate 的第二个参数。",
+    "solution": "out.shape[1] - long_ctx.shape[1] == 20。"
+  },
+  "debug": {
+    "instruction": "喂一个 dtype 不是 long 的上下文，观察 Embedding 拒绝。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nctx = torch.zeros((1,1), device=ns['device'])  # 默认 float\nprint('上下文张量 dtype:', ctx.dtype)\nmodel.generate(ctx, max_new_tokens=5)\n",
+    "expectedError": "RuntimeError",
+    "fix": "Embedding 只接受 long 型整数索引；要 dtype=torch.long。"
+  },
+  "modifications": [
+    {
+      "original": "原版 generate 500 字",
+      "teaching": "只生成 10 字并喂长上下文演示裁剪",
+      "reason": "未训练模型生成长文无意义，重点看裁剪逻辑。"
+    }
+  ],
+  "checkpoints": [
+    "长上下文被裁到 block_size",
+    "生成后总长=原长+新字",
+    "抽样循环逐字拼接"
+  ],
+  "glossary": [
+    {
+      "term": "自回归生成",
+      "explanation": "每次预测下一个词，再把它接回输入重复的生成方式。"
+    },
+    {
+      "term": "torch.multinomial",
+      "explanation": "按给定概率分布做有放回抽样。"
+    },
+    {
+      "term": "上下文裁剪",
+      "explanation": "只保留最近 block_size 个 token，避免位置表越界。"
+    }
+  ]
+}

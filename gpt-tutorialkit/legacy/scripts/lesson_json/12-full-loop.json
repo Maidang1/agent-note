@@ -1,0 +1,145 @@
+{
+  "id": "12",
+  "order": 12,
+  "module": "训练",
+  "title": "Bigram完整轻量训练循环，加一个生成入口",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 104,
+      "end": 122,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L104-L122"
+    }
+  ],
+  "goal": "把前面所有零件拼成一个真实的短训练循环，并在结束后调用generate生成一段文字。",
+  "prerequisites": [
+    "10",
+    "11"
+  ],
+  "explanation": [
+    "前面零件集齐了——模型、优化器、get_batch、loss、zero_grad/backward/step、estimate_loss。右侧把它们放进for it in range(max_iters)就是完整训练循环。本步真实训练12步，每6步查一次成绩，每次只抽3批估计——很短，但流程和原版逐行一致。",
+    "循环里做三件事：到检查步就estimate_loss并打印train/val；抽一批训练数据；算loss后走zero_grad→backward→step。同样要先ns['model']=model接线，estimate_loss在函数内部才找得到模型。",
+    "训练结束后用一个全0的(1,1)张量当起始上下文，调model.generate(context, 80)续写。12步训练只动了4225个参数中的一点点，输出仍接近随机字符，不要期待通顺英文。原版末尾没有model.eval()也没有保存权重，本教程保持同样行为。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 9,
+      "title": "让辅助工具准备好所有零件，开始拼训练循环",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns。第3行取出torch，第4行取出device。第5行实例化模型并搬到设备。第6行ns['model']=model接线——和上一课一样，estimate_loss在函数内部用全局名字model，必须把模型塞进ns它才找得到。第7行建AdamW优化器。第8-9行打印本次轻量训练配置：max_iters=12、eval_interval=6、eval_iters=3。"
+    },
+    {
+      "start": 10,
+      "end": 14,
+      "title": "训练循环：到检查步就查一次成绩",
+      "explanation": "第10行for it in range(ns['max_iters'])开始12步主循环。第11行if it % eval_interval == 0：每隔6步（即it=0和it=6）才查成绩。第12行调ns['estimate_loss']()，它在函数内部包no_grad、切eval、两段各抽3批平均、切回train。第13-14行打印这一步的train和val loss。"
+    },
+    {
+      "start": 15,
+      "end": 19,
+      "title": "每一步真正的训练：抽批→前向→更新",
+      "explanation": "第15行get_batch('train')抽一批。第16行model(xb,yb)前向算loss（不要logits）。第17行zero_grad清零，第18行backward算梯度，第19行step更新参数。这就是上一课学的四步，现在被放进循环里反复跑。"
+    },
+    {
+      "start": 20,
+      "end": 25,
+      "title": "训练结束，调generate写一段",
+      "explanation": "第20行提示原版末尾没有model.eval()，本教程保持train模式生成（Bigram无dropout，数值无差）。第21行造一个全0的(1,1)张量当起始上下文（编号0对应换行）。第22行调model.generate(context, max_new_tokens=80)续写80个字符。第23-24行打印并decode结果。第25行提醒：本教程默认不保存权重，运行结束参数即丢失。12步训练很短，输出仍接近随机字符。"
+    },
+    {
+      "start": 26,
+      "end": 26,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第26行检查out形状是(1,81)：1段，初始1个字符加新生成80个字符。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 104,
+      "end": 104,
+      "explanation": "主训练循环，重复max_iters次。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 107,
+      "end": 109,
+      "explanation": "每隔eval_interval步调estimate_loss并打印train/val。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 112,
+      "end": 112,
+      "explanation": "抽一批训练数据。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 115,
+      "end": 115,
+      "explanation": "前向算loss。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 116,
+      "end": 118,
+      "explanation": "zero_grad→backward→step完成一次参数更新。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 121,
+      "end": 121,
+      "explanation": "生成入口：全0张量(1,1)即换行符开头的上下文。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 122,
+      "end": 122,
+      "explanation": "generate续写500个字符并decode打印；本步只写80个。"
+    }
+  ],
+  "input": "观察12步训练中train/val loss变化；看生成输出。可改max_iters。",
+  "expected": "打印训练开始配置、step 0和step 6的train/val loss、训练结束提示、80字生成结果；输出近随机字符；生成后形状(1,81)。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\ndevice = ns['device']\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(device)\nns['model'] = model\noptimizer = torch.optim.AdamW(model.parameters(), lr=ns['learning_rate'])\nprint('轻量训练: max_iters=%d eval_interval=%d eval_iters=%d device=%s' % (\n    ns['max_iters'], ns['eval_interval'], ns['eval_iters'], device))\nfor it in range(ns['max_iters']):\n    if it % ns['eval_interval'] == 0:\n        losses = ns['estimate_loss']()\n        print('step %2d: train %.4f  val %.4f' % (\n            it, losses['train'].item(), losses['val'].item()))\n    xb, yb = ns['get_batch']('train')\n    _, loss = model(xb, yb)\n    optimizer.zero_grad(set_to_none=True)\n    loss.backward()\n    optimizer.step()\nprint('训练结束。原版末尾没有 model.eval()，我们也保持 train 模式生成。')\ncontext = torch.zeros((1, 1), dtype=torch.long, device=device)\nout = model.generate(context, max_new_tokens=80)\nprint('生成输出(短训练，近似随机字符，不代表英文质量):')\nprint(repr(ns['decode'](out[0].tolist())))\nprint('注意: 本教程默认不保存权重，运行结束参数即丢失。')\nassert out.shape == (1, 81)\n",
+  "exercise": {
+    "instruction": "用overrides={\"max_iters\":24}跑更长一点，观察step 0/6/12/18的train loss是否有下降趋势。",
+    "hint": "eval_interval仍是6，会多打几行。",
+    "solution": "短训练下loss可能缓慢下降，但val仍接近随机；这是正常的Bigram+小步数结果。"
+  },
+  "debug": {
+    "instruction": "generate第一个参数误传Python列表而不是张量，观察Embedding对输入类型的要求。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(ns['device'])\nout = model.generate([[0]], max_new_tokens=5)\n",
+    "expectedError": "TypeError",
+    "fix": "generate要求idx是long张量；用torch.zeros((1,1), dtype=torch.long, device=...)。"
+  },
+  "modifications": [
+    {
+      "original": "原版max_iters=3000、generate 500字符",
+      "teaching": "max_iters=12、generate 80字符",
+      "reason": "本机几秒跑完整流程，不启动长训练。"
+    },
+    {
+      "original": "原版末尾无eval()、不保存权重",
+      "teaching": "保持相同行为并显式说明",
+      "reason": "忠于源码，避免用户误以为漏了保存。"
+    }
+  ],
+  "checkpoints": [
+    "循环打印两次train/val",
+    "生成入口形状(1,81)",
+    "明确告知未eval、未保存"
+  ],
+  "glossary": [
+    {
+      "term": "训练循环",
+      "explanation": "反复取批→算loss→更新参数的主过程。"
+    },
+    {
+      "term": "生成入口",
+      "explanation": "训练后给一个起始上下文、续写新文字的调用点。"
+    },
+    {
+      "term": "权重不保存",
+      "explanation": "本教程默认不写盘；想保留需自行torch.save。"
+    }
+  ]
+}

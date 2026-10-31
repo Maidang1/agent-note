@@ -1,0 +1,20 @@
+# 01 先认识运行工具和训练开关 (default)  exit=0 3781ms PASS=True
+--- stdout ---
+PyTorch: 2.15.0
+device: cpu
+batch_size 原版= 64 本次= 4
+block_size 原版= 256 本次= 8
+max_iters 原版= 5000 本次= 12
+n_embd 原版= 384 本次= 32
+n_head 原版= 6 本次= 4
+n_layer 原版= 6 本次= 2
+dropout 原版= 0.2 本次= 0.1
+随机整数输入: tensor([[5, 7, 2, 0, 5, 3, 5, 0],
+        [4, 0, 2, 0, 7, 6, 0, 8],
+        [1, 4, 9, 5, 3, 6, 2, 0],
+        [2, 1, 6, 5, 9, 4, 5, 9]])
+B,T= (4, 8)
+重设种子后相同: True
+
+--- stderr ---
+

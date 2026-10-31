@@ -1,0 +1,139 @@
+{
+  "id": "23",
+  "order": 23,
+  "module": "组装GPT",
+  "title": "GPT 模型的五脏六腑：embedding、blocks、ln_f、lm_head",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 138,
+      "end": 147,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L138-L147"
+    }
+  ],
+  "goal": "看懂 GPTLanguageModel 在 __init__ 里登记了哪些子模块，以及它们各自的形状由哪些超参决定。",
+  "prerequisites": [
+    "22"
+  ],
+  "explanation": [
+    "前面几课我们已经把注意力头、前馈层和 Transformer Block 这些零件逐个造好。这节是总装：把零件按顺序拼成完整的 GPT 模型，再对着图纸逐个打印每个零件的形状来验收。右侧代码不训练，只搭楼、量尺寸。",
+    "流程很直白：先用 load_original 把 GPT 需要的数据、工具和已经写好的类都装进 ns，再从 ns 取出 GPTLanguageModel 这个类并加括号实例化，得到 model。实例化那一瞬间 __init__ 就登记了四样东西：token_embedding_table（字符编号查表成向量）、position_embedding_table（位置编号查表成向量）、n_layer 个 Block 串成的 blocks、最后的归一化 ln_f 和出口线性层 lm_head。",
+    "本次是轻量配置：词表 65 种字符、特征宽度 n_embd=32、上下文 block_size=8、层数 n_layer=2。所以 token 表是 (65,32)、位置表是 (8,32)、blocks 有 2 层、lm_head 把 32 维映射回 65。这些数字都实时读 ns 里的超参，你改 overrides 形状会跟着变；此时权重是随机的，不代表学会了任何东西。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "取工具并实例化整栋楼",
+      "explanation": "第1行引入 load_original 这个辅助加载工具；第2行选择 gpt 并得到 ns——它是贴着名字标签的收纳盒，里面已经有 torch、本次超参、完整语料，以及前几课写好的 Head、Block、GPTLanguageModel 等定义。第3行 ns['GPTLanguageModel']() 把类加括号造出 model；__init__ 里登记子模块的动作就发生在这一刻，右侧并没有重新写一遍类定义。"
+    },
+    {
+      "start": 4,
+      "end": 5,
+      "title": "先看本次实验的四个尺寸",
+      "explanation": "第4行显示词表大小 vocab_size=65；第5行并排显示特征宽度 n_embd=32、上下文 block_size=8、层数 n_layer=2。这四个数字决定后面每张表的形状，先记住它们，后面打印出来的形状都是由它们算出来的。"
+    },
+    {
+      "start": 6,
+      "end": 7,
+      "title": "两张查表的形状",
+      "explanation": "第6行打印 token_embedding_table.weight，形状 (65,32)：65 种字符每个占一行、每行 32 个数字。第7行打印 position_embedding_table.weight，形状 (8,32)：只有 8 行，对应 block_size 个可查位置。weight 就是这张查表真正存着的可训练数字。"
+    },
+    {
+      "start": 8,
+      "end": 10,
+      "title": "层数、归一化与出口",
+      "explanation": "第8行 len(model.blocks) 数出串起来的 Block 有 2 个；第9行用 type(...).__name__ 只显示 ln_f 是 LayerNorm，不展开它的参数；第10行 lm_head.weight 形状 (65,32)，这个线性层把 32 维特征投影成 65 个字符各自的打分数。"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "title": "按登记顺序点名全部部件",
+      "explanation": "第11行 model.named_children() 让模型自己报出 self 上登记过的每个子模块名字和类型；第12行在循环里逐个打印。这是核对“图纸上的零件真的都装上了”的最可靠方式——打印出的清单应包含 token_embedding_table、position_embedding_table、blocks、ln_f、lm_head。"
+    },
+    {
+      "start": 13,
+      "end": 16,
+      "title": "让程序替我们对尺寸",
+      "explanation": "assert 表示这几条必须成立。第13行核 token 表形状为 (65,32)，第14行核位置表为 (8,32)，第15行核 blocks 层数等于 n_layer，第16行核 lm_head 形状为 (65,32)。这些断言都实时读 ns，改 overrides 后仍按新尺寸核对；通过时不另打印，失败会报 AssertionError。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 138,
+      "end": 141,
+      "explanation": "定义 GPTLanguageModel 后必须先调用 super().__init__()，再给 self.xxx 赋值子模块；顺序反了 PyTorch 会报 TypeError: cannot assign module before Module.__init__() call。初始化完成后，nn.Module 才会把这些子模块登记为可训练参数。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 143,
+      "end": 143,
+      "explanation": "token_embedding_table：nn.Embedding(词表大小, n_embd)，把字符编号查表成特征向量。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 144,
+      "end": 144,
+      "explanation": "position_embedding_table：nn.Embedding(block_size, n_embd)，按位置编号查表成位置向量；最多只能查 block_size 个位置。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 145,
+      "end": 145,
+      "explanation": "blocks：用列表推导造 n_layer 个 Block，再用 nn.Sequential 串起来；每一层都做“互相交流+各自计算”。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 146,
+      "end": 146,
+      "explanation": "ln_f：最后的 LayerNorm，在进输出层前把特征向量的分布拉稳。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 147,
+      "end": 147,
+      "explanation": "lm_head：nn.Linear(n_embd, 词表大小)，把 n_embd 维特征变成每个字符的打分数。"
+    }
+  ],
+  "input": "不改代码即可运行；想观察结构差异，可在 overrides 里把 n_layer 改成 1 或 3，看 blocks 层数如何变化。",
+  "expected": "打印每个子模块的真实形状：token/position embedding、blocks 层数、lm_head 形状；断言它们与 ns 里的超参一致。此时权重是随机初始化的，不代表训练效果。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nmodel = ns['GPTLanguageModel']()\nprint('词表大小 vocab_size =', ns['vocab_size'])\nprint('特征宽度 n_embd =', ns['n_embd'], ' block_size =', ns['block_size'], ' n_layer =', ns['n_layer'])\nprint('token_embedding_table 形状:', tuple(model.token_embedding_table.weight.shape), '(vocab_size, n_embd)')\nprint('position_embedding_table 形状:', tuple(model.position_embedding_table.weight.shape), '(block_size, n_embd)')\nprint('blocks 层数:', len(model.blocks))\nprint('ln_f:', type(model.ln_f).__name__)\nprint('lm_head 形状:', tuple(model.lm_head.weight.shape), '(vocab_size, n_embd)')\nfor name, child in model.named_children():\n    print('子模块登记:', name, '->', type(child).__name__)\nassert tuple(model.token_embedding_table.weight.shape) == (ns['vocab_size'], ns['n_embd'])\nassert tuple(model.position_embedding_table.weight.shape) == (ns['block_size'], ns['n_embd'])\nassert len(model.blocks) == ns['n_layer']\nassert tuple(model.lm_head.weight.shape) == (ns['vocab_size'], ns['n_embd'])\n",
+  "exercise": {
+    "instruction": "在 overrides 里把 n_layer 改成 3，重新运行，确认 blocks 层数从 2 变成 3。",
+    "hint": "load_original('gpt', overrides={'n_layer': 3})。",
+    "solution": "blocks 层数打印为 3，其余形状不变；因为层数不改变 embedding 宽度。"
+  },
+  "debug": {
+    "instruction": "访问一个根本不存在的子模块名，观察 nn.Module 如何报属性错误。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nmodel = ns['GPTLanguageModel']()\nprint('我以为有这个层')\nprint(model.missing_layer)\n",
+    "expectedError": "AttributeError",
+    "fix": "子模块名必须与 __init__ 里 self.xxx 登记的名字完全一致；用 model.named_children() 列出真实名字。"
+  },
+  "modifications": [
+    {
+      "original": "n_embd=384, n_head=6, n_layer=6, block_size=256",
+      "teaching": "n_embd=32, n_head=4, n_layer=2, block_size=8（runtime 统一轻量覆盖）",
+      "reason": "只看结构时无需大模型，缩小后形状仍按同样规则打印。"
+    }
+  ],
+  "checkpoints": [
+    "token/position embedding 形状与超参一致",
+    "blocks 层数等于 n_layer",
+    "named_children 列出全部登记部件"
+  ],
+  "glossary": [
+    {
+      "term": "nn.Module",
+      "explanation": "PyTorch 模型基类，自动登记 self 上的子模块和可训练参数。"
+    },
+    {
+      "term": "embedding 查表",
+      "explanation": "用整数编号直接取出一行可训练向量，是最常用的输入表示方式。"
+    },
+    {
+      "term": "lm_head",
+      "explanation": "language model head，把特征向量映射成词表上每个字符分数的出口层。"
+    }
+  ]
+}

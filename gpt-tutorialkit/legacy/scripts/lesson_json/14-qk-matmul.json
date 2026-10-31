@@ -1,0 +1,137 @@
+{
+  "id": "14",
+  "order": 14,
+  "module": "手写GPT自注意力",
+  "title": "把输入拆成 B/T/C，算出 query·key 的亲密度矩阵",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 76,
+      "end": 83,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L76-L83"
+    }
+  ],
+  "goal": "理解 forward 里 B,T,C = x.shape 的含义，并复现 q @ k.transpose(-2,-1) 的形状代数。",
+  "prerequisites": [
+    "13"
+  ],
+  "explanation": [
+    "上一节我们看到 Head 里有 key/query/value 三块要学的数字板。这一节把它们真正用到一段输入 x 上，算出“位置 i 应该多看重位置 j”的原始亲密度矩阵。整体流程是：固定随机种子 → 造一个 (B,T,C) 的输入 x → 用 h.key(x) 和 h.query(x) 分别投影出 k 和 q → 把 k 翻转后与 q 做批量矩阵乘，得到 (B,T,T) 的 wei_raw。这一步还没缩放、还没加掩码。",
+    "B/T/C 三个数分别是“一批几句话、每句几个位置、每个位置几维特征”。k 和 q 形状都是 (B,T,head_size)；transpose(-2,-1) 把 k 翻成 (B,head_size,T)；最后 q@k 对每一批算一个 T×T 的小表，第 (i,j) 格就是位置 i 的 query 和位置 j 的 key 做点积的结果。",
+    "你会看到 wei_raw 形状恒为 (B,T,T)——它只跟 T 有关，跟 C、head_size 的具体数字无关。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具",
+      "explanation": "第1–2行从 tutorial_runtime 取出 load_original 并选择 GPT，得到 ns；第3行取出 torch。ns 里已经有 Head 类、n_embd、block_size 等。"
+    },
+    {
+      "start": 5,
+      "end": 9,
+      "title": "固定种子并造一段随机输入",
+      "explanation": "第5行固定随机种子让结果可复现。第6–7行建一个 head_size=8 的 Head。第8–9行 B=2、T=5、C=n_embd=32，用 randn 造一个 (2,5,32) 的标准正态随机张量 x——它只是实验用的数字，不是真实文字。"
+    },
+    {
+      "start": 10,
+      "end": 10,
+      "title": "确认输入形状",
+      "explanation": "第10行打印 x.shape 和解包出来的 B/T/C 三个数。B=2 表示本批有两段独立序列，T=5 表示每段 5 个位置，C=32 是每个位置手里的特征宽度。"
+    },
+    {
+      "start": 12,
+      "end": 15,
+      "title": "投影出 k 和 q",
+      "explanation": "第12–13行分别调用 h.key(x) 和 h.query(x)。这两个 Linear 在 Head 内部，形状都从 (B,T,32) 变成 (B,T,8)。第14–15行打印它们的形状确认。"
+    },
+    {
+      "start": 17,
+      "end": 18,
+      "title": "把 k 的最后两维翻转",
+      "explanation": "第17行 k.transpose(-2,-1) 把 (B,T,8) 翻成 (B,8,T)，也就是把“每个位置的钥匙”从一行变成一列，好和 q 做矩阵乘。第18行打印翻转后的形状。"
+    },
+    {
+      "start": 19,
+      "end": 21,
+      "title": "批量矩阵乘得到亲密度表",
+      "explanation": "第19行 q @ kt 对每一批 b 算一个 T×T 小表：(B,T,8) @ (B,8,T) → (B,T,T)。第20行打印形状，第21行解释矩阵乘规则——最后一维 8 必须两边对上，结果两个时间维都是 T。"
+    },
+    {
+      "start": 22,
+      "end": 25,
+      "title": "三条 assert 自检",
+      "explanation": "第22–24行分别核对 k、kt、wei_raw 的形状。第25行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 76,
+      "end": 76,
+      "explanation": "def forward(self, x)：Head 的前向入口，x 形状为 (B,T,C)，本步开始拆解它。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 77,
+      "end": 79,
+      "explanation": "注释说明输入是 (batch, time-step, channels)；B,T,C = x.shape 解包这三个数。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 80,
+      "end": 81,
+      "explanation": "k = self.key(x)、q = self.query(x)，形状从 (B,T,C) 变到 (B,T,head_size)。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 82,
+      "end": 83,
+      "explanation": "wei = q @ k.transpose(-2,-1) 先做亲密度矩阵乘；后面的 *k.shape[-1]**-0.5 缩放留到下一步。"
+    }
+  ],
+  "input": "改 B、T 或 head_size，例如 B=3, T=4，观察 wei_raw 的形状是否始终是 (B, T, T)。",
+  "expected": "打印出 x/k/q/kt/wei_raw 五层形状；wei_raw 形状恒为 (B,T,T)，且与 C、head_size 的具体数值无关，只跟 T 有关。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\ntorch.manual_seed(0)\nhead_size = 8\nh = ns['Head'](head_size)\nB, T, C = 2, 5, ns['n_embd']\nx = torch.randn(B, T, C)\nprint('输入 x 形状 (B,T,C) =', tuple(x.shape), ' batch=', B, ' 时间步=', T, ' 特征宽度 C=', C)\n\nk = h.key(x)\nq = h.query(x)\nprint('key(x)   形状 =', tuple(k.shape), '  # (B,T,head_size)')\nprint('query(x) 形状 =', tuple(q.shape))\n\nkt = k.transpose(-2, -1)\nprint('k.transpose(-2,-1) 形状 =', tuple(kt.shape), '  # 把最后两维互换')\nwei_raw = q @ kt\nprint('q @ k.transpose(-2,-1) 形状 =', tuple(wei_raw.shape), '  # (B,T,hs)@(B,hs,T) -> (B,T,T)')\nprint('矩阵乘规则: 最后一维 hs=', head_size, '必须匹配; 结果两个时间维都是 T=', T)\nassert k.shape == (B, T, head_size)\nassert kt.shape == (B, head_size, T)\nassert wei_raw.shape == (B, T, T)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 T 改成 3，head_size 改成 4，手算 wei_raw 应该是什么形状，再运行验证。",
+    "hint": "wei_raw 的形状由两个时间维 T 决定，与 head_size 无关。",
+    "solution": "wei_raw 形状是 (B, 3, 3)；k.transpose 后是 (B, 4, 3)，矩阵乘 (B,3,4)@(B,4,3) -> (B,3,3)。"
+  },
+  "debug": {
+    "instruction": "故意不做 transpose，直接 q @ k，观察 PyTorch 如何报告形状不匹配。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\ntorch.manual_seed(0)\nh = ns['Head'](8)\nx = torch.randn(2, 5, ns['n_embd'])\nk = h.key(x); q = h.query(x)\nprint('q 形状', tuple(q.shape), ' k 形状', tuple(k.shape))\nwei = q @ k   # 忘了 transpose，直接让 q 和 k 相乘\nprint(wei.shape)\n",
+    "expectedError": "RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [B, head_size] but got: [B, T]",
+    "fix": "矩阵乘要求最后一维匹配：q 的最后一维是 head_size，所以 k 必须先 transpose 成最后一维是 T、倒数第二维是 head_size。"
+  },
+  "modifications": [
+    {
+      "original": "原版 B=64,T=256,n_embd=384",
+      "teaching": "本步用 B=2,T=5,n_embd=32,head_size=8",
+      "reason": "把 T×T 亲密度矩阵压到 5×5，方便手推形状。"
+    }
+  ],
+  "checkpoints": [
+    "k 和 q 形状都是 (B,T,head_size)",
+    "k.transpose 后形状 (B,head_size,T)",
+    "wei_raw 形状 (B,T,T)"
+  ],
+  "glossary": [
+    {
+      "term": "批次 B",
+      "explanation": "一次并行处理多少条独立序列。"
+    },
+    {
+      "term": "时间步 T",
+      "explanation": "每条序列当前看到多少个字符位置。"
+    },
+    {
+      "term": "特征宽度 C",
+      "explanation": "每个位置上特征向量的维度，本教程里等于 n_embd。"
+    },
+    {
+      "term": "transpose(-2,-1)",
+      "explanation": "交换张量倒数第二维和最后一维，常用于把列向量翻成行向量。"
+    }
+  ]
+}

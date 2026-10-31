@@ -1,0 +1,11 @@
+# 05 get_batch：随机剪小段，并把x右移一格当答案 (debug)  exit=1 3607ms PASS=True
+--- stdout ---
+正确关系应是 y[:, :-1] == x[:, 1:]
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+    assert torch.equal(y[:, :-1], x[:, 1:])
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+AssertionError
+

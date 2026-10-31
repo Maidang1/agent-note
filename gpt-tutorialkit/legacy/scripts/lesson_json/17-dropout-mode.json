@@ -1,0 +1,122 @@
+{
+  "id": "17",
+  "order": 17,
+  "module": "手写GPT自注意力",
+  "title": "Dropout 在 train 和 eval 下行为完全不同",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 74,
+      "end": 74,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L74-L74"
+    },
+    {
+      "file": "gpt.py",
+      "start": 86,
+      "end": 86,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L86-L86"
+    }
+  ],
+  "goal": "看懂 Dropout 训练时随机置零并按比例放大、评估时变成恒等映射。",
+  "prerequisites": [
+    "16"
+  ],
+  "explanation": [
+    "Dropout 是训练时的随机关闭开关：每个数字有 p 概率被临时擦掉，没被擦掉的位置会放大 1/(1-p) 倍，保证平均值不变。它本身没有可训练数字，只是一种正则化手段，强迫模型不要过度依赖某几个位置。",
+    "关键在于这个随机动作只在 train 模式发生。model.eval() 之后 Dropout 直接变成“什么都不做”，输入原样返回。整体流程：造一个全 1 矩阵 x → 切到 train 模式跑一遍 → 切到 eval 模式跑一遍 → 对比两次输出。",
+    "你会看到 train 模式下大约 10% 位置变 0，剩下位置变成 1.111（=1/0.9）；eval 模式下整矩阵还是全 1。同一份代码、同一个输入，两种模式输出完全不同。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备辅助工具（含 nn）",
+      "explanation": "第1–3行取出 load_original、ns、torch。第4行取出 ns['nn']，后面要用 nn.Dropout。"
+    },
+    {
+      "start": 6,
+      "end": 9,
+      "title": "建 Dropout 并造全 1 输入",
+      "explanation": "第6行 p = ns['dropout'] 取本次实验的丢弃率 0.1。第7行 d = nn.Dropout(p) 建一个 dropout 层。第8–9行固定种子、造一个 (3,5) 的全 1 矩阵 x——选全 1 是为了最容易看清“擦掉几个、放大几倍”。"
+    },
+    {
+      "start": 11,
+      "end": 12,
+      "title": "切到 train 模式跑一遍",
+      "explanation": "第11行 d.train() 把 dropout 切到训练行为。第12行 y_train = d(x) 真正做一次前向：约 10% 元素被随机置零，其余放大 1/(1-p)。"
+    },
+    {
+      "start": 13,
+      "end": 17,
+      "title": "打印 train 输出并验证规则",
+      "explanation": "第13–14行打印整张 y_train。第15行统计被置零的比例，应≈p=0.1。第16–17行把非零元素挑出来求平均，应≈1/(1-p)=1.111。"
+    },
+    {
+      "start": 19,
+      "end": 23,
+      "title": "切到 eval 模式再跑一遍",
+      "explanation": "第19行 d.eval() 切到评估行为。第20行 y_eval = d(x)，此时 dropout 等于恒等映射。第21–23行打印 y_eval 并用 torch.equal 核对它和输入 x 完全相同。"
+    },
+    {
+      "start": 24,
+      "end": 26,
+      "title": "assert 自检",
+      "explanation": "第24行核对 train 输出不等于输入（确实发生了随机丢弃），第25行核对 eval 输出等于输入，第26行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 74,
+      "end": 74,
+      "explanation": "self.dropout = nn.Dropout(dropout)：构造时只登记概率，不改变数值。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 86,
+      "end": 86,
+      "explanation": "wei = self.dropout(wei)：训练时随机清零部分注意力权重；eval 时这一行等于 wei。"
+    }
+  ],
+  "input": "改 p=0.3 或 p=0.0，观察 train 模式下置零比例和放大倍数如何变化。",
+  "expected": "train 模式下约 p 比例位置为 0，非零位置放大 1/(1-p)；eval 模式下输出与输入完全相同。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nnn = ns['nn']\n\np = ns['dropout']\nd = nn.Dropout(p)\ntorch.manual_seed(0)\nx = torch.ones(3, 5)\n\nd.train()\ny_train = d(x)\nprint('train 模式, dropout=%.2f:' % p)\nprint(y_train)\nprint('  被置零的比例 =', round((y_train == 0).float().mean().item(), 3))\nnz = y_train[y_train != 0]\nprint('  非零位置平均被放大倍数 =', round(nz.mean().item(), 3), '  # 应约等于 1/(1-p) =', round(1/(1-p), 3))\n\nd.eval()\ny_eval = d(x)\nprint('eval 模式:')\nprint(y_eval)\nprint('  是否和输入完全相同: ', torch.equal(y_eval, x))\nassert not torch.equal(y_train, x)\nassert torch.equal(y_eval, x)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 p 改成 0.0，看看 train 模式和 eval 模式输出是否一样。",
+    "hint": "p=0 时没有任何位置被丢弃，放大倍数 1/(1-0)=1。",
+    "solution": "p=0 时 train 输出也等于输入，Dropout 等于恒等映射。"
+  },
+  "debug": {
+    "instruction": "把丢弃率设成 1.0，看所有数字被全部擦掉会怎样。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nd = ns['nn'].Dropout(1.0)   # 错误：丢弃率 100%\ny = d(torch.ones(3, 3))\nprint('dropout=1.0 后元素和 =', y.sum().item())\nassert y.sum().item() > 0, '所有元素都被丢弃，后续加权平均会变成全 0'\n",
+    "expectedError": "AssertionError: 所有元素都被丢弃，后续加权平均会变成全 0",
+    "fix": "丢弃率必须小于 1；原版用 0.1~0.2，过大的 dropout 会让模型学不到东西。"
+  },
+  "modifications": [
+    {
+      "original": "原版 dropout=0.2",
+      "teaching": "runtime 统一为 0.1",
+      "reason": "小实验里丢得太狠会让打印结果不稳定。"
+    },
+    {
+      "original": "原版只在 forward 里调用一次",
+      "teaching": "本步单独把 Dropout 拆出来对比 train/eval",
+      "reason": "很多人第一次学 Transformer 时没意识到 dropout 是模式相关的。"
+    }
+  ],
+  "checkpoints": [
+    "train 下置零比例≈p",
+    "train 非零位置放大≈1/(1-p)",
+    "eval 下输出恒等于输入"
+  ],
+  "glossary": [
+    {
+      "term": "train()/eval()",
+      "explanation": "切换 nn.Module 的行为模式；Dropout、BatchNorm 等层会随之改变。"
+    },
+    {
+      "term": "正则化 regularization",
+      "explanation": "训练时人为加入随机性，防止模型死记训练数据。"
+    }
+  ]
+}

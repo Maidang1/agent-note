@@ -1,0 +1,15 @@
+# 23 GPT 模型的五脏六腑：embedding、blocks、ln_f、lm_head (debug)  exit=1 3631ms PASS=True
+--- stdout ---
+我以为有这个层
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    print(model.missing_layer)
+          ^^^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1976, in __getattr__
+    raise AttributeError(
+        f"'{type(self).__name__}' object has no attribute '{name}'"
+    )
+AttributeError: 'GPTLanguageModel' object has no attribute 'missing_layer'
+

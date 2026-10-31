@@ -1,0 +1,121 @@
+{
+  "id": "24",
+  "order": 24,
+  "module": "组装GPT",
+  "title": "为什么要 _init_weights：开工前把权重摆到好位置",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 149,
+      "end": 158,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L149-L158"
+    }
+  ],
+  "goal": "看懂 self.apply(self._init_weights) 在做什么，明白随机权重不是随便乱填，并亲手验证权重的均值与方差。",
+  "prerequisites": [
+    "23"
+  ],
+  "explanation": [
+    "搭好楼之后，第一件事是给每个零件的权重摆一个合适的初始值。权重不是随便填小数就行：一开始太大，前向传播时数字会越乘越大直到溢出；太小，信号又传不动。GPTLanguageModel 的 __init__ 末尾用 self.apply(self._init_weights)，对楼里每个子模块统一做了一次初始化。",
+    "_init_weights 的规则很简单：遇到 Linear 层，权重填成均值 0、标准差 0.02 的正态分布，有 bias 就把 bias 清零；遇到 Embedding 查表，权重同样填均值 0、标准差 0.02。标准差 0.02 很小，保证每一层的输入输出都落在稳定范围，bias 从零开始最中性。",
+    "右侧先取出已经按这套规则初始化好的 lm_head 权重，看它的均值和标准差是否真的接近 0 和 0.02；再亲手造一个全新的 Linear 和 Embedding，手动调一次 model._init_weights，对比调用前后 bias 和标准差的变化。model._init_weights 是模型内部的一个函数，右侧只是把它拿来用在自己新建的小层上，并没有改原版文件。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "取工具、造模型",
+      "explanation": "第1行引入 load_original；第2行选 gpt 得到 ns；第3行把 ns 里的 torch 和 nn 取出来用；第4行造出 model。这一刻 __init__ 末尾的 self.apply(self._init_weights) 已经跑过一遍，所以 model 里所有权重此刻都按规则就位了。"
+    },
+    {
+      "start": 5,
+      "end": 6,
+      "title": "看现成模型的权重长什么样",
+      "explanation": "第5行取 lm_head.weight 并 .detach()，意思是把这块数字从“要记录梯度”的状态里摘出来，方便只看数值；第6行打印它的均值（实测约 -0.0002，接近 0）和标准差（实测约 0.02）。这就是 apply 之后的真实结果。"
+    },
+    {
+      "start": 7,
+      "end": 8,
+      "title": "全新 Linear 自带的默认初始化",
+      "explanation": "第7行新建一个输入 8、输出 16 的线性层；它还没经过我们的规则，用的是 PyTorch 默认初始化。第8行打印 bias 前 5 个，能看到是一些非零小数（约 ±0.2），这正是要被规则改掉的东西。"
+    },
+    {
+      "start": 9,
+      "end": 11,
+      "title": "把规则用到这个 Linear 上",
+      "explanation": "第9行调用 model._init_weights(lin)，把刚建的线性层交给那个内部函数；它判断出这是 Linear，就把权重重填为均值 0、标准差 0.02，并把 bias 清零。第10行确认 bias 全为 0；第11行打印权重标准差（约 0.02，因为只有 8×16=128 个数，样本小会有轻微波动）。"
+    },
+    {
+      "start": 12,
+      "end": 14,
+      "title": "对 Embedding 也用同一条规则",
+      "explanation": "第12行新建一个 10 行 4 列的查表；第13行再调一次 _init_weights，它判断出这是 Embedding，把查表权重也填成均值 0、标准差 0.02；第14行打印其标准差（实测约 0.016，因为这张表只有 10×4=40 个数，样本小波动明显；规则上仍是 0.02）。可见 Linear 和 Embedding 走的是同一个标准差。"
+    },
+    {
+      "start": 15,
+      "end": 17,
+      "title": "三条断言核对",
+      "explanation": "第15行要求 lm_head 权重均值绝对值小于 0.05；第16行要求它的标准差离 0.02 不超过 0.02；第17行要求刚才那个 Linear 的 bias 确实全零。通过时不另打印，失败会报 AssertionError。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 149,
+      "end": 150,
+      "explanation": "注释说明这是视频未讲但重要的“更好的初始化”；self.apply 把 _init_weights 作用到每个子模块。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 152,
+      "end": 156,
+      "explanation": "遇到 Linear：权重用 normal_(0, 0.02) 初始化；若有 bias 则 zeros_ 置零。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 157,
+      "end": 158,
+      "explanation": "遇到 Embedding：同样用 normal_(0, 0.02) 初始化查表权重。"
+    }
+  ],
+  "input": "可改 n_embd/n_layer 改变权重矩阵大小；观察 std 是否仍约为 0.02（样本越小波动略大）。",
+  "expected": "打印 lm_head 权重的均值（接近 0）和标准差（接近 0.02）；手动调用 _init_weights 后 bias 全为 0。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch, nn = ns['torch'], ns['nn']\nmodel = ns['GPTLanguageModel']()\nw = model.lm_head.weight.detach()\nprint('lm_head 权重均值:', float(w.mean()), ' 标准差:', float(w.std()))\nlin = nn.Linear(8, 16)\nprint('初始化前 bias 前5个:', lin.bias[:5].tolist())\nmodel._init_weights(lin)\nprint('初始化后 bias 是否全零:', bool((lin.bias == 0).all()))\nprint('初始化后 Linear 权重标准差:', float(lin.weight.std()))\nemb = nn.Embedding(10, 4)\nmodel._init_weights(emb)\nprint('初始化后 Embedding 权重标准差:', float(emb.weight.std()))\nassert abs(float(w.mean())) < 0.05\nassert abs(float(w.std()) - 0.02) < 0.02\nassert bool((lin.bias == 0).all())\n",
+  "exercise": {
+    "instruction": "把 std 改成 0.1 手动观察变化：新建一个 Linear，用 torch.nn.init.normal_(lin.weight, 0, 0.1) 后打印 std。",
+    "hint": "直接调用 torch.nn.init.normal_，不要改原版文件。",
+    "solution": "打印 std 接近 0.1；这只是观察，真正训练用 0.02。"
+  },
+  "debug": {
+    "instruction": "给 normal_ 传一个负的标准差，观察 PyTorch 拒绝。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch.nn as nn\nbad = nn.Linear(4, 4)\nprint('故意传负 std')\nnn.init.normal_(bad.weight, mean=0.0, std=-0.1)\n",
+    "expectedError": "RuntimeError",
+    "fix": "标准差必须非负；正态分布的尺度不能是负数。"
+  },
+  "modifications": [
+    {
+      "original": "视频未覆盖初始化，README 旧称收敛偏慢",
+      "teaching": "本提交已 apply _init_weights，本步直接打印验证",
+      "reason": "以当前代码为准，README 滞后部分如实说明。"
+    }
+  ],
+  "checkpoints": [
+    "lm_head 权重均值≈0",
+    "Linear bias 初始化后全零",
+    "_init_weights 对 Embedding 同样生效"
+  ],
+  "glossary": [
+    {
+      "term": "权重初始化",
+      "explanation": "训练开始前给可训练参数赋初值的方式，影响收敛速度。"
+    },
+    {
+      "term": "apply",
+      "explanation": "nn.Module.apply 会递归对每个子模块调用传入函数。"
+    },
+    {
+      "term": "标准差 std",
+      "explanation": "衡量数值分散程度；这里用来让初始输出大小稳定。"
+    }
+  ]
+}

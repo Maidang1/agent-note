@@ -1,0 +1,11 @@
+# 04 把整数列表变成张量，并切出训练/验证两段 (debug)  exit=1 3455ms PASS=True
+--- stdout ---
+n_bad = 1003854.6 float
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 6, in <module>
+    train = data[:n_bad]
+            ~~~~^^^^^^^^
+TypeError: slice indices must be integers or None or have an __index__ method
+

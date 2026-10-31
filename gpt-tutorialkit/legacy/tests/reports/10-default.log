@@ -1,0 +1,12 @@
+# 10 一次训练四步曲：zero_grad/backward/step，参数真的变了 (default)  exit=0 7321ms PASS=True
+--- stdout ---
+优化器学习率: 0.01  参数组数量: 1
+更新前 loss = 4.7051
+梯度已生成: 范数=0.1864 非空=True
+step后权重最大变化 = 0.010341 (>0 说明参数真被改了)
+第1小步 loss = 4.5072
+第2小步 loss = 4.7497
+第3小步 loss = 4.4064
+
+--- stderr ---
+

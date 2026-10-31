@@ -1,0 +1,175 @@
+{
+  "id": "11",
+  "order": 11,
+  "module": "训练",
+  "title": "estimate_loss：no_grad下抽样平均train/val成绩",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 46,
+      "end": 58,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L46-L58"
+    },
+    {
+      "file": "bigram.py",
+      "start": 107,
+      "end": 109,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L107-L109"
+    },
+    {
+      "file": "gpt.py",
+      "start": 50,
+      "end": 62,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L50-L62"
+    },
+    {
+      "file": "gpt.py",
+      "start": 209,
+      "end": 211,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L209-L211"
+    }
+  ],
+  "goal": "看懂estimate_loss如何在不记梯度的情况下，抽样若干批平均出train和val损失；并知道必须先ns[\"model\"]=model。",
+  "prerequisites": [
+    "10"
+  ],
+  "explanation": [
+    "训练中不能每步都看成绩——算成绩会浪费时间。每隔eval_interval步才抽查一次，这就是estimate_loss。它在train和val两段各抽eval_iters批，分别算loss再平均，得到两个分数。这个函数是辅助工具load_original在内部定义好的，右侧不写它。",
+    "两个关键点：一是@torch.no_grad()装饰器让函数内部不记录反向计算图，省内存也更快（查成绩不更新参数）；二是一个沙盒坑——estimate_loss函数体内直接用全局名字model，而函数的全局字典就是ns，所以右侧必须在调用前显式写ns['model']=model，函数才找得到自己的模型。",
+    "本节右侧先手动在train和val两段各抽eval_iters批、算loss平均（和函数内部做的事一样），再调真正的ns['estimate_loss']()对照；最后确认函数结束后model.training回到True。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 7,
+      "title": "让辅助工具准备好模型，并把模型登记进ns",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns。第3行取出torch。第4行取出vocab_size。第5行实例化模型并搬到设备。第6行ns['model']=model是沙盒里的关键一行：estimate_loss这个函数是辅助工具在内部定义好的，它的函数体里直接用全局名字model，而函数的全局字典就是ns——你必须把model塞进ns，函数才能找到它。少写这一行会报NameError。第7行打印本次eval_iters（抽几批平均，本节=3）。"
+    },
+    {
+      "start": 8,
+      "end": 15,
+      "title": "手动复刻estimate_loss内部：train和val各抽几批算平均",
+      "explanation": "第8行for循环分别处理'train'和'val'两段。第9行建空列表manual装每批loss。第10行内层循环跑eval_iters次。第11行get_batch(split)抽一批。第12行model(X,Y)前向算loss（这里只取不回传，教学上和函数内部等价）。第13行把标量loss存进列表。第14-15行打印这一段各批loss和平均值。这段手动代码做的事，和estimate_loss函数内部一模一样。"
+    },
+    {
+      "start": 16,
+      "end": 18,
+      "title": "调用真正的estimate_loss对照",
+      "explanation": "第16行调ns['estimate_loss']()，它在函数内部包了@torch.no_grad()、先model.eval()、两段各抽eval_iters批平均、再model.train()切回来。第17行打印它返回的字典out，应和第14-15行手动算的接近（抽样有随机性）。第18行检查model.training——函数内部切到eval后又切回train，这里应回到True。"
+    },
+    {
+      "start": 19,
+      "end": 20,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第19行检查out['train']是标量（0维），第20行检查函数结束后model.training确实回到True。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 46,
+      "end": 46,
+      "explanation": "@torch.no_grad()装饰estimate_loss：算损失时不跟踪梯度。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 47,
+      "end": 48,
+      "explanation": "定义estimate_loss，准备空字典out存train/val两个分数。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 49,
+      "end": 49,
+      "explanation": "model.eval()切到评估模式。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 50,
+      "end": 51,
+      "explanation": "对train和val分别循环，用zeros(eval_iters)接每批loss。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 52,
+      "end": 52,
+      "explanation": "for k in range(eval_iters)在当前split内抽eval_iters批，逐批算loss存入列表；批数越多估计越稳但越慢。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 53,
+      "end": 55,
+      "explanation": "取一批、前向算loss、把标量loss存入列表。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 56,
+      "end": 56,
+      "explanation": "out[split] = losses.mean()对eval_iters批求平均。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 57,
+      "end": 58,
+      "explanation": "model.train()切回训练模式并返回out。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 107,
+      "end": 109,
+      "explanation": "训练循环里每eval_interval步调一次并打印train/val。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 50,
+      "end": 62,
+      "explanation": "GPT的estimate_loss逐行相同。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 209,
+      "end": 211,
+      "explanation": "GPT还在最后一步iter==max_iters-1时多查一次成绩；bigram没有这条额外分支。"
+    }
+  ],
+  "input": "观察手动逐批loss与estimate_loss平均；确认函数结束后model回到train模式。",
+  "expected": "打印eval_iters、手动逐批loss列表与平均、estimate_loss返回字典、model.training最终为True。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\nV = ns['vocab_size']\nmodel = ns['BigramLanguageModel'](V).to(ns['device'])\nns['model'] = model\nprint('eval_iters =', ns['eval_iters'])\nfor split in ['train', 'val']:\n    manual = []\n    for k in range(ns['eval_iters']):\n        X, Y = ns['get_batch'](split)\n        _, l = model(X, Y)\n        manual.append(l.item())\n    print('手动 %-5s 各批loss = %s 平均=%.4f' % (\n        split, [round(x, 3) for x in manual], sum(manual) / len(manual)))\nout = ns['estimate_loss']()\nprint('estimate_loss 返回:', {k: round(v.item(), 4) for k, v in out.items()})\nprint('函数结束后 model.training =', model.training, '(应为True)')\nassert out['train'].dim() == 0\nassert model.training is True\n",
+  "exercise": {
+    "instruction": "用overrides把eval_iters改成5，再跑一遍，观察平均所用的批数变多、数字更稳。",
+    "hint": "overrides={'eval_iters':5}。",
+    "solution": "手动列表长度和estimate_loss内部批数都变成5。"
+  },
+  "debug": {
+    "instruction": "故意不写ns[\"model\"]=model，看estimate_loss在它的globals里找不到model时报错。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nmodel = ns['BigramLanguageModel'](ns['vocab_size']).to(ns['device'])\nprint('忘了写 ns[model] = model')\nns['estimate_loss']()\n",
+    "expectedError": "NameError",
+    "fix": "在调estimate_loss前写 ns[\"model\"]=model，让它在自己的全局字典里找到模型。"
+  },
+  "modifications": [
+    {
+      "original": "原版model是全局变量，estimate_loss直接引用",
+      "teaching": "沙盒中必须显式ns[\"model\"]=model",
+      "reason": "每步独立运行，函数globals里没有现成model。"
+    }
+  ],
+  "checkpoints": [
+    "手动平均与estimate_loss一致",
+    "函数结束后model.training=True",
+    "train/val两个分数都存在"
+  ],
+  "glossary": [
+    {
+      "term": "@torch.no_grad",
+      "explanation": "装饰器：其内代码不构建反向计算图。"
+    },
+    {
+      "term": "eval/train模式",
+      "explanation": "模型开关：eval关闭dropout等训练专用行为。"
+    },
+    {
+      "term": "损失估计",
+      "explanation": "抽样若干批平均得到的近似成绩。"
+    }
+  ]
+}

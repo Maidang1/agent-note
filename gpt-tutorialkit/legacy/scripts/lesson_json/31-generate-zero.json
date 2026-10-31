@@ -1,0 +1,117 @@
+{
+  "id": "31",
+  "order": 31,
+  "module": "训练GPT",
+  "title": "从零字符生成：原版没包 no_grad、也没 eval，别期待通顺",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 222,
+      "end": 225,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L222-L225"
+    }
+  ],
+  "goal": "复现原版末尾从全零 context 生成的代码，并如实说明原版既没 torch.no_grad 也没 model.eval()，且不承诺文本质量。",
+  "prerequisites": [
+    "30"
+  ],
+  "explanation": [
+    "原版 gpt.py 最后就是从一个全零的开头生成 500 个字符再打印。这节复现这个动作，只是只生成 30 个，因为模型还没训练，出来必然是乱码。流程是：造一个 (1,1) 的全零编号当开头（编号 0 是字符表里第一个字符）→ 调 generate 循环抽 30 个字 → decode 还原成字符串打印。",
+    "要如实记住原版两个“不讲究”：一是 generate 函数本身没包 torch.no_grad()，生成时 PyTorch 还在白记录计算图；二是模型刚造完默认处于 train 模式，原版没调 eval()，dropout 仍在随机丢。真正部署时这两点都该改，但本实验忠于原版。",
+    "右侧第 9 到 10 行特意用 with torch.no_grad() 包一次 generate 做对照，打印结果张量的 requires_grad，看它是否关掉了梯度记录。再次强调：未训练模型输出什么字符都不代表水平，别用通顺度评判它。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备模型",
+      "explanation": "第1到4行照常取工具、ns、torch、造 model 搬到设备。本步不训练，模型权重就是初始化时的随机值。"
+    },
+    {
+      "start": 5,
+      "end": 7,
+      "title": "从零开头生成 30 字并打印",
+      "explanation": "第5行造 (1,1) 全零编号 context；第6行 model.generate(context, 30) 内部循环抽 30 次，[0].tolist() 取第一批转成编号列表；第7行用 ns['decode'] 把编号还原成字符串打印，大概率是一堆乱码。"
+    },
+    {
+      "start": 8,
+      "end": 8,
+      "title": "核对长度",
+      "explanation": "第8行打印 len(out)=31：开头 1 个加上新生成 30 个。改 max_new_tokens 后这个数跟着变。"
+    },
+    {
+      "start": 9,
+      "end": 11,
+      "title": "用 no_grad 做对照",
+      "explanation": "第9行进入 torch.no_grad() 上下文；第10行在里面再 generate 5 个字；第11行离开上下文后打印 gfree.requires_grad，应为 False，表示这次生成没记录梯度、更省内存。"
+    },
+    {
+      "start": 12,
+      "end": 12,
+      "title": "如实说明原版特点",
+      "explanation": "第12行只是一行提示文字：原版 generate 既没包 no_grad 也没 eval，且这是未训练模型，不承诺输出质量。"
+    },
+    {
+      "start": 13,
+      "end": 13,
+      "title": "断言",
+      "explanation": "第13行核对生成列表长度确实是 31。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 222,
+      "end": 223,
+      "explanation": "context=torch.zeros((1,1), long, device) 作为起始提示，编号0是字符表第一个字符。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 224,
+      "end": 224,
+      "explanation": "generate 500 字后 decode 成字符串打印；原版此处未包 no_grad。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 225,
+      "end": 225,
+      "explanation": "注释掉的写 more.txt 那行：把 1 万字生成存盘，本步不执行。"
+    }
+  ],
+  "input": "可改 max_new_tokens（如 30）；不要期待输出是通顺英文。",
+  "expected": "打印一段未训练模型生成的字符（多为乱码）；并对比 with/without no_grad 时张量的 requires_grad。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\ncontext = torch.zeros((1, 1), dtype=torch.long, device=ns['device'])\nout = model.generate(context, max_new_tokens=30)[0].tolist()\nprint('从零字符生成(未训练):', repr(ns['decode'](out)))\nprint('生成长度:', len(out), '(起始1 + 新30)')\nwith torch.no_grad():\n    gfree = model.generate(torch.zeros((1,1), dtype=torch.long, device=ns['device']), max_new_tokens=5)\nprint('with no_grad 后 requires_grad =', gfree.requires_grad)\nprint('注意：原版 generate 未包 no_grad，也未 eval；这是未训练模型，不承诺质量。')\nassert len(out) == 31\n",
+  "exercise": {
+    "instruction": "把 max_new_tokens 改成 60，观察生成字符串变长；理解为什么乱码在短样本里更明显。",
+    "hint": "generate 第二个参数。",
+    "solution": "decode 输出长度约 60+1 字符，仍是随机字符。"
+  },
+  "debug": {
+    "instruction": "decode 一个不在词表里的编号，观察 KeyError。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nprint('词表最大编号是', ns['vocab_size']-1)\nprint(ns['decode']([999999]))\n",
+    "expectedError": "KeyError",
+    "fix": "itos 字典只收 0..vocab_size-1；generate 经 softmax/multinomial 只会产生合法编号。"
+  },
+  "modifications": [
+    {
+      "original": "原版生成500字、未no_grad未eval",
+      "teaching": "只生成30字，并额外演示 no_grad 对照",
+      "reason": "忠于原版同时讲清部署差异；不承诺质量。"
+    }
+  ],
+  "checkpoints": [
+    "从全零 context 成功生成",
+    "输出为乱码属正常",
+    "no_grad 张量不再 requires_grad"
+  ],
+  "glossary": [
+    {
+      "term": "torch.no_grad",
+      "explanation": "上下文管理器，关掉梯度记录，节省内存、加速推理。"
+    },
+    {
+      "term": "context",
+      "explanation": "生成时的起始提示序列，这里是单个编号0。"
+    }
+  ]
+}

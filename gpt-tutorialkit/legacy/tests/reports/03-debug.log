@@ -1,0 +1,14 @@
+# 03 字符和整数的互转：stoi/encode/decode (debug)  exit=1 3667ms PASS=True
+--- stdout ---
+语料里没有汉字，试着 encode: '你好'
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 5, in <module>
+    print(ns['encode'](weird))
+          ~~~~~~~~~~~~^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/bigram.py", line 27, in <lambda>
+    encode = lambda s: [stoi[c] for c in s] # encoder: take a string, output a list of integers
+                        ~~~~^^^
+KeyError: '你'
+

@@ -1,0 +1,10 @@
+# 18 把注意力权重乘到 value 上：Head 的完整输出 (debug)  exit=1 3761ms PASS=True
+--- stdout ---
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 13, in <module>
+    out = wei @ v.transpose(-2,-1)   # 错误：v 多转置了一次
+          ~~~~^~~~~~~~~~~~~~~~~~~~
+RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [1, 4] but got: [1, 8].
+

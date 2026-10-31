@@ -1,0 +1,137 @@
+{
+  "id": "03",
+  "order": 3,
+  "module": "数据与Bigram",
+  "title": "字符和整数的互转：stoi/encode/decode",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 25,
+      "end": 28,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L25-L28"
+    },
+    {
+      "file": "gpt.py",
+      "start": 29,
+      "end": 32,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L29-L32"
+    }
+  ],
+  "goal": "学会把一个字符串变成整数列表（encode），再把整数列表还原成字符串（decode）。",
+  "prerequisites": [
+    "02"
+  ],
+  "explanation": [
+    "计算机只认数字，不认字母。上一课已经排好了字符表chars，辅助工具load_original在内部照着这个顺序建好了两本对照册：stoi查\"这个字符是几号\"，itos查\"这个号是哪个字符\"，还有两个小函数encode（字符串→整数列表）和decode（整数列表→字符串）。右侧不重新建册子，只把它们从ns这个收纳盒里取出来，拿一个短字符串走一遍\"编码→解码\"的往返。",
+    "本节先打印vocab_size和空格、换行、字母e各自的编号，确认每个字符都有独立门牌号；再把sample='All: speak.'交给encode得到整数列表，逐字符对照；最后decode回原文，用assert确认往返一致。一个字符对应一个整数，所以整数列表长度永远等于字符串长度。",
+    "这套编号是字符级的：空格、标点、换行各算一个独立字符；语料里没出现过的字符（比如汉字）在stoi里查不到，会直接报KeyError。后面所有模型喂进去的都是encode出来的整数列表。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "让辅助工具准备好对照册和编解码函数",
+      "explanation": "第1行引入load_original辅助加载工具。第2行选择bigram语料并得到ns这个收纳盒；stoi、itos、encode、decode其实都是辅助工具在内部照着上一课的chars建好的，右侧并没有重新写字典推导式。第3行从ns取出stoi和itos两本对照册，第4行取出encode和decode两个小函数。到这里还没有开始编码任何文字。"
+    },
+    {
+      "start": 5,
+      "end": 9,
+      "title": "先看看词表规模和对照册长什么样",
+      "explanation": "第6行打印vocab_size，也就是字符表里一共有多少种字符。第7行显示字符表前10个字符，repr让换行这类看不见的字符也以符号形式出现。第8行直接查stoi：空格、换行、字母e各自是几号，说明空格和换行也占独立编号。第9行反过来查itos：0号和1号分别是什么字符。这几行只是看一眼册子，不改变它。"
+    },
+    {
+      "start": 10,
+      "end": 16,
+      "title": "把一个短字符串编码成整数列表",
+      "explanation": "第11行sample='All: speak.'是本节唯一可改的输入。第12行把sample交给encode，它在函数内部逐个字符去stoi里查门牌号，得到整数列表ids。第13行打印整串编码结果。第14行打印一行提示，第15-16行用zip把字符和编号成对取出，逐行打印对照，方便你核对每个字符对应哪个整数。因为一个字符对应一个整数，ids长度等于sample长度。"
+    },
+    {
+      "start": 17,
+      "end": 19,
+      "title": "再解码回原文，看是否一模一样",
+      "explanation": "第17行把ids交给decode，它在函数内部逐个整数去itos里找字符，再用join拼回字符串back。第18行打印back，第19行比较back和sample是否相等。如果中间任何一步查错了号，这里就会对不上。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "让程序帮我们核对往返一致",
+      "explanation": "assert表示\"这一条必须成立\"。第20行检查解码结果等于原字符串，第21行检查整数列表长度等于原字符串长度。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert，练习只改第11行的sample。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 25,
+      "end": 25,
+      "explanation": "字典推导式：枚举chars，把每个字符映射到它在表中的下标，stoi[c]=i。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 26,
+      "end": 26,
+      "explanation": "itos是stoi的反字典：把下标映射回字符，键和值刚好互换。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 27,
+      "end": 27,
+      "explanation": "encode是lambda：遍历字符串每个字符c，查表得到整数列表；查不到的字符会直接抛KeyError。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 28,
+      "end": 28,
+      "explanation": "decode是encode的逆：遍历整数列表查itos，再用join拼成字符串。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 29,
+      "end": 32,
+      "explanation": "GPT文件里这四行与bigram完全相同，共用同一套字符编号。"
+    }
+  ],
+  "input": "改sample为你自己的英文短句；观察输出列表长度和原字符串长度相等。",
+  "expected": "打印真实vocab_size、空格/换行/字母的编号，以及sample逐字符的编号对照；decode回原文与原串完全相等，往返断言通过。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nstoi, itos = ns['stoi'], ns['itos']\nencode, decode = ns['encode'], ns['decode']\n\nprint('vocab_size =', ns['vocab_size'])\nprint('字符表前10个:', repr(''.join(ns['chars'][:10])))\nprint('stoi 样例: 空格=', stoi[' '], ' 换行=', stoi['\\n'], ' 字母e=', stoi['e'])\nprint('itos 样例: 0 ->', repr(itos[0]), ' 1 ->', repr(itos[1]))\n\nsample = 'All: speak.'\nids = encode(sample)\nprint('encode(%r) =' % sample, ids)\nprint('逐字符对照:')\nfor ch, i in zip(sample, ids):\n    print('   ', repr(ch), '->', i)\nback = decode(ids)\nprint('decode 回原文 =', repr(back))\nprint('往返一致:', back == sample)\nassert back == sample\nassert len(ids) == len(sample)\n",
+  "exercise": {
+    "instruction": "把sample改成你自己的一个英文单词（含空格或标点），先心算整数列表长度，再运行验证。",
+    "hint": "列表长度一定等于字符串长度，因为一个字符对应一个整数。",
+    "solution": "sample='hello world!'，encode出12个整数，decode后与原串相同。"
+  },
+  "debug": {
+    "instruction": "故意encode一个语料里没有的字符（汉字），观察查不到门牌号时的报错。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\nweird = '你好'\nprint('语料里没有汉字，试着 encode:', repr(weird))\nprint(ns['encode'](weird))\n",
+    "expectedError": "KeyError",
+    "fix": "stoi里没有这个字符的编号；只用语料中出现过的ASCII字符，或先把它加进chars并重建两本对照册。"
+  },
+  "modifications": [
+    {
+      "original": "原版用lambda就地定义四个名字",
+      "teaching": "由load_original装载同名函数，行为一致",
+      "reason": "保证每步独立运行都拿到同一套字符编号。"
+    }
+  ],
+  "checkpoints": [
+    "vocab_size 与02步一致为真实词表数",
+    "空格、换行各有独立编号",
+    "encode→decode往返断言通过"
+  ],
+  "glossary": [
+    {
+      "term": "stoi",
+      "explanation": "string-to-integer字典：字符到编号的映射。"
+    },
+    {
+      "term": "itos",
+      "explanation": "integer-to-string字典：编号到字符的映射。"
+    },
+    {
+      "term": "encode",
+      "explanation": "字符串→整数列表的函数。"
+    },
+    {
+      "term": "decode",
+      "explanation": "整数列表→字符串的函数。"
+    }
+  ]
+}

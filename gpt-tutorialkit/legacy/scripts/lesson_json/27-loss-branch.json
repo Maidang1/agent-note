@@ -1,0 +1,129 @@
+{
+  "id": "27",
+  "order": 27,
+  "module": "GPT前向传播",
+  "title": "有没有答案算两种账：targets 分支与交叉熵",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 171,
+      "end": 179,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L171-L179"
+    }
+  ],
+  "goal": "理解 forward 在有无 targets 时的两条分支，以及为什么要 view 成 (B*T, C) 再算 cross_entropy。",
+  "prerequisites": [
+    "26"
+  ],
+  "explanation": [
+    "forward 一次能办两种事：只预测，或边预测边算错多少。区别就在调用时传不传第二个参数 targets。不传（生成时就是这样），它只返回 logits、loss 直接是 None；传了（训练时），它还要把模型的猜测和标准答案比一比，算出一个损失数字。",
+    "算损失前要把张量摊平：logits 原本是 (B,T,65)，标准答案 target 是 (B,T) 的整数。交叉熵函数要求输入是 (N,65)、答案是长度 N 的一维表。于是把所有位置摊成 N=B×T 行——这里 B=2、T=8，N=16——意思是每个时间步都是一道独立的 65 选 1 选择题。交叉熵内部自带 softmax，所以这里的 logits 不用先 softmax。",
+    "一个容易踩的细节：原版在带 targets 时把 logits 重新赋值成摊平后的 (16,65) 再返回，所以训练时拿到的 logits 是二维；不带 targets 时返回原始三维 (2,8,65)。右侧两种调用各跑一次对照。因为 target 是随机造的、模型还没训练，损失应接近瞎猜参考值 -ln(1/65)≈4.17。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备模型",
+      "explanation": "第1到4行照常：引入工具、取 ns、取 torch、造 model 搬到设备。本步不改模型权重，只观察 forward 的两种返回。"
+    },
+    {
+      "start": 5,
+      "end": 7,
+      "title": "造输入和随机答案",
+      "explanation": "第5行 B=2、T=block_size=8；第6行随机造 (2,8) 的编号 idx；第7行再随机造一张同样形状的 target 当“标准答案”。这张答案是随机数，只用来演示损失流程，不代表真训练。"
+    },
+    {
+      "start": 8,
+      "end": 10,
+      "title": "带答案跑一次，看二维 logits 和损失",
+      "explanation": "第8行 model(idx, target) 进入带 targets 分支；内部把 logits 摊成 (16,65) 并用交叉熵算出一个标量 loss。第9行打印 logits_t 形状 (16,65)，其中 16=B×T；第10行打印 loss（实测约 4.16）。"
+    },
+    {
+      "start": 11,
+      "end": 13,
+      "title": "不带答案跑一次，看三维 logits",
+      "explanation": "第11行 model(idx, None) 走另一分支，不摊平、不算损失；第12行打印 logits_n 形状 (2,8,65)，第13行打印 loss2，应为 None。对比可见：传不传答案，返回的 logits 维数都不一样。"
+    },
+    {
+      "start": 14,
+      "end": 15,
+      "title": "拿瞎猜基准对照",
+      "explanation": "第14行导入 math；第15行算 -ln(1/65)≈4.17，这是 65 个字符纯瞎猜时的平均交叉熵。模型未训练、答案又是随机的，刚才那个 loss（约 4.16）就该和它差不多——这正说明此时模型还什么都没学会。"
+    },
+    {
+      "start": 16,
+      "end": 18,
+      "title": "三条断言",
+      "explanation": "第16行核带答案时 logits 是 (16,65)，第17行核不带答案时是 (2,8,65)，第18行核 loss2 确实是 None。把 B 改成 4 后，第一维会变成 4×8=32。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 171,
+      "end": 172,
+      "explanation": "没传 targets 时 loss=None，只做预测，不计算误差。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 173,
+      "end": 174,
+      "explanation": "传了 targets 就解包 logits 形状 B,T,C，准备摊平。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 175,
+      "end": 176,
+      "explanation": "logits 被重新赋值为 view(B*T,C)、targets view 成 (B*T)；注意 logits 是原地覆盖，后面 return 的就是这个二维形状。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 177,
+      "end": 177,
+      "explanation": "F.cross_entropy 内部含 softmax，直接比较预测分布与真实下一个字符。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 179,
+      "end": 179,
+      "explanation": "return logits, loss：带 targets 时 logits 是二维 (B*T,C)、loss 是标量；不带 targets 时 logits 是三维 (B,T,C)、loss 为 None。"
+    }
+  ],
+  "input": "可改 B/T 看 N=B*T 如何变化；targets 是随机整数，所以 loss 大约是 -ln(1/vocab_size)。",
+  "expected": "带 targets 时打印二维 (B*T,C) logits 与标量 loss；不带 targets 时打印三维 (B,T,C) logits 且 loss 为 None。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nB, T = 2, ns['block_size']\nidx = torch.randint(ns['vocab_size'], (B, T), device=ns['device'])\ntarget = torch.randint(ns['vocab_size'], (B, T), device=ns['device'])\nlogits_t, loss = model(idx, target)\nprint('带targets 返回 logits:', tuple(logits_t.shape), '(B*T,C) =', B*T, 'x', ns['vocab_size'])\nprint('loss:', float(loss.detach()))\nlogits_n, loss2 = model(idx, None)\nprint('不带targets 返回 logits:', tuple(logits_n.shape), '(B,T,C)')\nprint('不带targets loss =', loss2)\nimport math\nprint('随机猜测参考 -ln(1/vocab)=', round(-math.log(1/ns['vocab_size']), 3))\nassert logits_t.shape == (B*T, ns['vocab_size'])\nassert logits_n.shape == (B, T, ns['vocab_size'])\nassert loss2 is None\n",
+  "exercise": {
+    "instruction": "把 B 改成 4，确认摊平后的样本数从 2*T 变成 4*T。",
+    "hint": "N = B*T。",
+    "solution": "logits.view(B*T,C) 第一维等于 4*block_size。"
+  },
+  "debug": {
+    "instruction": "让 targets 的长度和 logits 对不上，观察交叉熵报形状错误。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nidx = torch.randint(ns['vocab_size'], (2, ns['block_size']), device=ns['device'])\nbad_target = torch.randint(ns['vocab_size'], (2, ns['block_size'] + 1), device=ns['device'])\nmodel(idx, bad_target)\n",
+    "expectedError": "RuntimeError",
+    "fix": "targets 必须与 idx 同形状 (B,T)；view 后两者样本数要一致。"
+  },
+  "modifications": [
+    {
+      "original": "完整训练时逐批算",
+      "teaching": "本步只跑一次前向看 loss 分支",
+      "reason": "先理解损失形状，下一步才训练。"
+    }
+  ],
+  "checkpoints": [
+    "带 targets 返回二维 (B*T,C) logits 与标量 loss",
+    "不带 targets 返回三维 (B,T,C) logits 且 loss 为 None",
+    "loss≈-ln(1/vocab_size) 说明随机初始化"
+  ],
+  "glossary": [
+    {
+      "term": "交叉熵 cross_entropy",
+      "explanation": "衡量预测概率分布与真实答案差距的损失函数，内部自带 softmax。"
+    },
+    {
+      "term": "view(B*T,C)",
+      "explanation": "把多个时间步拼成一张长表，便于逐位计算损失。"
+    }
+  ]
+}

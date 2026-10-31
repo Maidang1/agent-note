@@ -1,0 +1,144 @@
+{
+  "id": "20",
+  "order": 20,
+  "module": "手写GPT自注意力",
+  "title": "FeedFoward：先扩 4 维、加非线性、再压回来",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 106,
+      "end": 119,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L106-L119"
+    }
+  ],
+  "goal": "看懂 Sequential 里“Linear 4×→ReLU→Linear 收回→Dropout”的形状变化，并注意类名 FeedFoward 是原版拼写。",
+  "prerequisites": [
+    "19"
+  ],
+  "explanation": [
+    "注意力负责“交换信息”，FeedFoward 负责“每个位置自己消化信息”。它对每个时间步独立做一次：先把特征从 32 维扩到 128 维（4 倍），用 ReLU 砍掉负数，再压回 32 维。",
+    "整体流程：实例化 FeedFoward → 用 ff.net[i] 单独取出流水线里的每一层 → 逐层打印中间形状。ff.net 是一个 nn.Sequential，里面按顺序排着 Linear、ReLU、Linear、Dropout。注意类名写成 FeedFoward——这是原版代码里的拼写（少了一个 r），必须保持原样，不能“顺手修正”。",
+    "你会看到形状变化 32→128→128→32；ReLU 后约一半位置为 0；最终输出与输入同形状。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具",
+      "explanation": "第1–2行取出 load_original 和 ns。第3行取出 torch。ns 里有 FeedFoward 类和 n_embd 配置。"
+    },
+    {
+      "start": 5,
+      "end": 10,
+      "title": "建 FeedFoward 并造输入",
+      "explanation": "第5行固定种子。第6行 ff = ns['FeedFoward'](n_embd) 实例化前馈模块。第7行切到 eval 关掉 dropout。第8–9行造 (2,5,32) 的随机输入 x。第10行打印输入形状。"
+    },
+    {
+      "start": 12,
+      "end": 13,
+      "title": "过第一层 Linear，扩到 4 倍",
+      "explanation": "第12行 y = ff.net[0](x) 取出流水线里第 0 层（Linear(32,128)）跑一遍。第13行打印形状，应从 (2,5,32) 变成 (2,5,128)。"
+    },
+    {
+      "start": 14,
+      "end": 15,
+      "title": "过 ReLU，砍掉负数",
+      "explanation": "第14行 y = ff.net[1](y) 是 ReLU：所有负数压成 0，正数原样保留。第15行统计变成 0 的比例，标准正态输入下约一半。"
+    },
+    {
+      "start": 16,
+      "end": 17,
+      "title": "过第二层 Linear，收回维度",
+      "explanation": "第16行 y = ff.net[2](y) 是 Linear(128,32)，把维度压回来。第17行打印形状，应回到 (2,5,32)。"
+    },
+    {
+      "start": 18,
+      "end": 19,
+      "title": "直接跑 ff(x) 拿最终输出",
+      "explanation": "第18行 out = ff(x) 直接调用 FeedFoward.forward，它内部就是按顺序跑完 net[0]→net[1]→net[2]→dropout。第19行打印最终输出形状。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "assert 自检",
+      "explanation": "第20行核对输出形状等于输入形状，第21行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 106,
+      "end": 106,
+      "explanation": "class FeedFoward(nn.Module)：注意原版拼写是 Foward，不是 Forward。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 107,
+      "end": 108,
+      "explanation": "docstring：一个线性层后面接一个非线性激活，描述 FeedFoward 的整体形态。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 109,
+      "end": 110,
+      "explanation": "def __init__(self, n_embd)：构造函数入口；super().__init__() 必须先调，nn.Module 才会登记子模块。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 111,
+      "end": 117,
+      "explanation": "nn.Sequential(Linear(n_embd,4*n_embd), ReLU(), Linear(4*n_embd,n_embd), Dropout)：扩维→非线性→收回→丢弃。 第117行为空行，分隔 net 构造与 forward。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 118,
+      "end": 119,
+      "explanation": "forward 直接 return self.net(x)：Sequential 已经把顺序写死，不需要手动调每一层。"
+    }
+  ],
+  "input": "改 4*n_embd 为 2*n_embd，观察中间宽度和参数数量变化。",
+  "expected": "打印 32→128→128→32 的形状变化；ReLU 后约一半位置为 0；最终输出与输入同形状。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\ntorch.manual_seed(0)\nff = ns['FeedFoward'](ns['n_embd'])\nff.eval()\nB, T, C = 2, 5, ns['n_embd']\nx = torch.randn(B, T, C)\nprint('输入形状 =', tuple(x.shape))\n\ny = ff.net[0](x)\nprint('Linear(%d, 4*%d) 后形状 =' % (C, C), tuple(y.shape), '  # 先扩到 4 倍')\ny = ff.net[1](y)\nprint('ReLU 后负数被压成 0 的比例 =', round((y == 0).float().mean().item(), 3))\ny = ff.net[2](y)\nprint('第二个 Linear 收回形状 =', tuple(y.shape))\nout = ff(x)\nprint('FeedFoward 输出形状 =', tuple(out.shape))\nassert out.shape == x.shape\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 ReLU 换成 nn.GELU()，看看负数不再被完全压成 0 会怎样。",
+    "hint": "GELU 是平滑版 ReLU，负数会保留一个小的负值。",
+    "solution": "把 ff.net[1] 换成 nn.GELU() 后，(y==0) 的比例明显下降；现代 Transformer 多用 GELU。"
+  },
+  "debug": {
+    "instruction": "只跑前两层（到 ReLU），断言输出形状等于输入形状，观察失败。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\ntorch.manual_seed(0)\nff = ns['FeedFoward'](ns['n_embd']); ff.eval()\nx = torch.randn(2, 5, ns['n_embd'])\nout = ff.net[:2](x)   # 错误：只跑到 ReLU，没有第二个 Linear 收回维度\nprint('只跑到 ReLU 的输出形状 =', tuple(out.shape))\nassert out.shape == x.shape, '形状没有回到 n_embd'\n",
+    "expectedError": "AssertionError: 形状没有回到 n_embd",
+    "fix": "必须把第二个 Linear(4*n_embd, n_embd) 跑上，才能把维度从 128 压回 32。"
+  },
+  "modifications": [
+    {
+      "original": "原版 4*n_embd、ReLU、dropout=0.2",
+      "teaching": "本步用 runtime 默认 n_embd=32、dropout=0.1",
+      "reason": "中间 128 维仍足够观察，参数总量小。"
+    },
+    {
+      "original": "原版类名 FeedFoward 拼写错误",
+      "teaching": "保持原样，课程里专门提醒不要改",
+      "reason": "课程代码要和源文件逐行对应。"
+    }
+  ],
+  "checkpoints": [
+    "中间宽度 = 4×n_embd",
+    "ReLU 后约一半元素为 0",
+    "输出形状 == 输入形状"
+  ],
+  "glossary": [
+    {
+      "term": "ReLU",
+      "explanation": "max(0, x)：把所有负数压成 0，引入非线性。"
+    },
+    {
+      "term": "nn.Sequential",
+      "explanation": "按顺序串联多层容器，forward 自动逐层调用。"
+    },
+    {
+      "term": "扩维/收维",
+      "explanation": "先把特征维度放大、再压回原维度的常见模式。"
+    }
+  ]
+}

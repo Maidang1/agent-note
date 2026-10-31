@@ -1,0 +1,32 @@
+{
+  "migration_review": "PASS_WITH_NOTE",
+  "path": "/Users/bytedance/codes/myself/70days/gpt-tutorialkit",
+  "checked_by": "独立审查子代理（只读）",
+  "checks": {
+    "canonical_self_contained": {
+      "result": "PASS",
+      "evidence": "scripts/lesson_json/ 32 个 JSON，order 1..32 连续；build_lessons.py/run_lessons.py 磁盘版 SOURCES=[ROOT/scripts/lesson_json]，不依赖作者 session 绝对路径；backend/runner_server.py、launcher.py、run.sh、astro.config.ts grep 无旧 chats/agent_mode/Library 绝对路径"
+    },
+    "venv": {
+      "result": "PASS",
+      "evidence": "sys.executable=新 .venv/bin/python；sys.prefix=新 .venv（venv 身份正确）；Python 3.14.7 / torch 2.15.0 / numpy 2.5.4"
+    },
+    "originals_and_corpus": {
+      "result": "PASS",
+      "evidence": "bigram.py 4140B sha256:2bf3bcd6e208a49b；gpt.py 8140B sha256:3fb0b9134f2d38c6；more.txt 10001B；input.txt 1115394B（=旧 train1003854+val111540 总和一致）"
+    },
+    "nav": {"result": "PASS", "evidence": "nav-order.json 32 条，order 1..32 连续；截图左侧导航顺序与之一致"},
+    "selfcheck_records": {"result": "PASS", "evidence": "tests/reports/run-records.json 64 条，PASS 64 / FAIL 0"},
+    "training_generate": {
+      "result": "PASS",
+      "evidence": "作者后端实测：bigram loss 4.71→4.64、gpt 4.18→4.07、生成 17 字符 exit 0；截图 migrated-run 面板显示运行成功 4235ms 退出码 0、torch 2.15.0 cpu、override 生效"
+    },
+    "edit_error_reset": {"result": "PASS", "evidence": "migrated-edit-error-reset.png 在新路径；run/停止/重置按钮在面板右上角真实渲染"},
+    "zip": {
+      "result": "PASS_WITH_NOTE",
+      "evidence": "gpt-tutorialkit完整源码.zip 3,165,625B / 388 条，含 scripts/lesson_json 33 项；不含 .venv/node_modules/凭证；旧 project 目录与旧 zip 已不存在"
+    },
+    "readme": {"result": "PASS", "evidence": "README 已改为 .venv 优先解释器解析优先级；并发单实例说明"}
+  },
+  "note": "课程 canonical 已工程内自包含；ZIP 已是最新重打版（含 lesson_json）。SIGTERM 信号路径沙箱内仍未实测（环境限制），launcher 源码与首领先退清理路径此前已 PASS。未起 live 服务做额外请求测试，依赖作者提供的 run-records 与截图证据。"
+}

@@ -1,0 +1,233 @@
+{
+  "review_meta": {
+    "reviewer_agent": "s_000pL9aceR0",
+    "env_id": "client:1044603:568897831715251",
+    "date": "2026-10-30",
+    "scope": "GPT从0到1课程 03-32 课件（01/02为已定稿种子）",
+    "sources_pinned_commit": "52201428ed7b46804849dea0b3ccf0de9df1a5c3",
+    "runtime_verified": "gpt-tutorialkit/runtime/tutorial_runtime（_originals 与 sources 逐字节一致）",
+    "venv": "/Users/bytedance/DoubaoWork/chats/2026-10-30/new-chat-1/.tutorial-venv (torch 2.12.1, python3.14)"
+  },
+  "verdict": {
+    "overall": "PASS_WITH_MINOR_FIXES",
+    "severe_issues": 0,
+    "medium_issues": 3,
+    "minor_issues": 5
+  },
+  "independent_smoke": {
+    "method": "审查者用正式 runtime (PYTHONPATH=gpt-tutorialkit/runtime) + .tutorial-venv 对子进程逐课实跑 code 与 debug.code，cwd=审查者自己工作目录，未改动任何工程与课件文件",
+    "result": "30课 × (default+debug) = 60/60 PASS；default exit=0，debug exit=1 且错误类型与 expectedError 一致",
+    "elapsed_per_lesson_s": "2.9-7.5（最长为含12步训练的10/12/29/30）",
+    "artifact": "independent-smoke-03-32.json（本目录）"
+  },
+  "official_run_logs": {
+    "03-12_author_dir": "runs/*.log 齐全，traceback 指向 _originals/，default=0/debug=1，可信",
+    "23-32_author_dir": "runs/*.log 齐全（含 exercise 日志），default=0/debug=1，可信",
+    "13-22_author_dir": "无 runs/ 正式日志；仅有旧 run-records.json 且 traceback 指向 sources/gpt.py（旧 shim 产物，按要求不采信）。独立冒烟已补证通过，但作者应在 13-22 目录补正式 runtime runs/ 日志"
+  },
+  "coverage_tokenize": {
+    "method": "tokenize 取物理行内含非 COMMENT/NL/NEWLINE/INDENT/DEDENT token 的行；ast 排除模块/类 docstring 独占行；覆盖=全部课件 statements [start,end] 区间并集（sourceRefs 只作上下文不计覆盖）",
+    "bigram.py": {
+      "effective": 79,
+      "covered": 76,
+      "pct": 96.2,
+      "uncovered": [
+        {
+          "line": 44,
+          "code": "return x, y",
+          "lesson": "05 get_batch 返回行未列 statement"
+        },
+        {
+          "line": 52,
+          "code": "for k in range(eval_iters):",
+          "lesson": "11 estimate_loss 内层 for 头未列"
+        },
+        {
+          "line": 75,
+          "code": "else:",
+          "lesson": "07/08 分支头"
+        }
+      ]
+    },
+    "gpt.py": {
+      "effective": 155,
+      "covered": 145,
+      "pct": 93.5,
+      "uncovered": [
+        {
+          "line": "1-3",
+          "code": "import torch / torch.nn / functional",
+          "lesson": "01 仅逐行解释了 bigram 导入，gpt 导入只有 sourceRef"
+        },
+        {
+          "line": 64,
+          "code": "class Head(nn.Module):",
+          "lesson": "13"
+        },
+        {
+          "line": 76,
+          "code": "def forward(self, x):",
+          "lesson": "14"
+        },
+        {
+          "line": 92,
+          "code": "class MultiHeadAttention(nn.Module):",
+          "lesson": "19"
+        },
+        {
+          "line": "109-110",
+          "code": "def __init__(self, n_embd): / super().__init__()",
+          "lesson": "20 FeedFoward 构造入口未解释（中等）"
+        },
+        {
+          "line": 121,
+          "code": "class Block(nn.Module):",
+          "lesson": "21"
+        },
+        {
+          "line": 206,
+          "code": "for iter in range(max_iters):",
+          "lesson": "30 训练循环头"
+        }
+      ]
+    },
+    "fully_verified_lines": "gpt.py L149-158 _init_weights 完整覆盖；L50-62 estimate_loss 由 11/30 覆盖；L181-196 generate 完整覆盖；L198-225 实例化/优化器/训练/生成尾 由 29/30/31/32 完整覆盖"
+  },
+  "runtime_safety_boundary": {
+    "truncation": "loader 在 'model = GPTLanguageModel(' 与 'model = BigramLanguageModel(' 处截断 exec，原版 max_iters=3000/500 字符生成尾段永不执行",
+    "overrides_checked": "batch_size=4, block_size=8, max_iters=12, eval_interval=6, eval_iters=3, n_embd=32, n_head=4, n_layer=2, dropout=0.1；learning_rate 保持原版(bigram 1e-2 / gpt 3e-4)；device cuda else cpu；torch.manual_seed(1337)；threads=2",
+    "honesty": "12/31/32 均如实说明原版末尾无 eval()、train 模式生成、不保存权重；24 已纠正 README 旧说法(初始化不佳)与本提交(已应用 _init_weights)的混淆",
+    "long_training_never_started": "全部 60 次实跑 wall time < 8s/课"
+  },
+  "accuracy_spot_checks": {
+    "2D_vs_3D_logits": "07(bigram) 与 27(gpt) 一致：带 targets 时 logits 被 view(B*T,C) 后返回(2D)，无 targets 时返回 (B,T,C)(3D)；27 代码双侧断言通过，与源码 L76-79/L173-179 一致",
+    "lesson15_narrative_numbers": "正式 runtime 复跑实得 maxp 0.7143→0.402、熵 1.2989→1.5551，与讲义 '≈0.71/≈0.40/1.30/1.56' 一致",
+    "params": "GPT 轻量 29761 (日志实测)；Bigram 65*65=4225；vocab=65；语料 1115394 字符，n=1003854, val=111540；-ln(1/65)=4.174 — 全部与实跑一致",
+    "shapes": "Head(8,32) 768参；cat 4头×8=32；FF 32→128→32；n_head=8→head_size=4；LayerNorm mean≈0/std≈1；tril[:T,:T] T=9 越界 — 全部实测一致"
+  },
+  "issues": [
+    {
+      "id": "M1",
+      "severity": "medium",
+      "lesson": "16-causal-mask",
+      "where": "exercise.solution",
+      "finding": "triu 练习答案称'位置0会变成全-inf（除了对角自己）'。实测：triu 做掩码时 row0=[F,F,F,F,F] 完全不被mask（softmax看全部5位），是最后一行除对角外全 -inf。该句与本课 hint'下三角被填 -inf'自相矛盾，方向说反。",
+      "fix": "改为'最后一行只能看到自己；语义反了，模型只能看未来'。"
+    },
+    {
+      "id": "M2",
+      "severity": "medium",
+      "lesson": "20-feedforward",
+      "where": "statements 覆盖",
+      "finding": "gpt.py L109-110 `def __init__(self,n_embd):` 与 `super().__init__()` 无 statement 覆盖（statements 从 L111 开始）。FeedFoward 构造入口未解释。",
+      "fix": "补一条 statement: 109-110，说明先 super() 再用 Sequences 装 Linear/ReLU/Linear。"
+    },
+    {
+      "id": "M3",
+      "severity": "medium",
+      "lesson": "13-22 整批",
+      "where": "作者目录证据",
+      "finding": "13-22 目录无正式 runtime runs/ 日志；旧 run-records.json 的 traceback 指向 sources/gpt.py（旧 shim），按验收标准不采信。审查者独立冒烟已 20/20 补证通过，但交付目录应与 03-12/23-32 一样落正式日志。",
+      "fix": "作者用 scripts/run_lessons.py 或同等正式 runtime 重跑 13-22 并把日志放进各自 artifacts/runs/。"
+    },
+    {
+      "id": "m1",
+      "severity": "minor",
+      "lesson": "05/11/07",
+      "where": "coverage",
+      "finding": "bigram.py L44 return x,y / L52 内层 for k / L75 else 三个有效行无 statement。",
+      "fix": "各补一行 statement 或在现有区间扩展。"
+    },
+    {
+      "id": "m2",
+      "severity": "minor",
+      "lesson": "01/13/14/19/21/30",
+      "where": "coverage",
+      "finding": "gpt.py L1-3 导入、class-def 行 L64/L92/L121、def forward L76、训练 for 头 L206 无独立 statement（教学上由课题隐含）。",
+      "fix": "可不改，或在对应课 statements 里把区间扩到 class/def 行。"
+    },
+    {
+      "id": "m3",
+      "severity": "minor",
+      "lesson": "14-qk-matmul",
+      "where": "explanation",
+      "finding": "拼写 'transponse(-2,-1)' 应为 transpose。",
+      "fix": "改 transpose。"
+    },
+    {
+      "id": "m4",
+      "severity": "minor",
+      "lesson": "29-one-step",
+      "where": "code",
+      "finding": "对 requires_grad 的 loss 直接 float() 打印，stderr 出 UserWarning(Converting a tensor with requires_grad...)。24 已改 .detach()，29 未同步。无害但用户会看到黄字警告。",
+      "fix": "float(loss.detach())。"
+    },
+    {
+      "id": "m5",
+      "severity": "minor",
+      "lesson": "22-block-forward",
+      "where": "explanation",
+      "finding": "'初始化时这个比值大约0.25左右'，实测 0.2667/0.2614。",
+      "fix": "改为'大约0.27'。"
+    }
+  ],
+  "evidence_files": {
+    "independent_smoke": "/Users/bytedance/Library/Application Support/DoubaoWork/Profile 1/.doubaowork/agent_mode/workspace/.sessions/38450278301925634/agents/s_000pL9aceR0/artifacts/independent-smoke-03-32.json",
+    "coverage": "/Users/bytedance/Library/Application Support/DoubaoWork/Profile 1/.doubaowork/agent_mode/workspace/.sessions/38450278301925634/agents/s_000pL9aceR0/artifacts/coverage-report.json",
+    "this_report": "/Users/bytedance/Library/Application Support/DoubaoWork/Profile 1/.doubaowork/agent_mode/workspace/.sessions/38450278301925634/agents/s_000pL9aceR0/artifacts/review-report.json"
+  },
+  "engineering_acceptance": {
+    "real_tutorialkit_verdict": "PASS（真实包，非仿UI）",
+    "evidence": {
+      "deps": "astro/package.json 钉版 @tutorialkit/astro|react|theme|types 1.6.0，node_modules 实装 astro/react/runtime/theme/types 五包",
+      "integration": "astro.config.ts: tutorialkit({defaultRoutes:false})——按预期关掉 WebContainer 默认路由（本机native PyTorch跑不了WebContainer）",
+      "content_schema": "src/content/config.ts 用 @tutorialkit/types 的 contentSchema 定义 tutorial collection",
+      "course_format": "官方目录格式：group/lesson/{content.md(frontmatter type:lesson/custom.lessonId), _files/lesson.py, _solution/lesson.py}，getCollection + lesson.render() 渲染MDX",
+      "theme": "Layout.astro 引入 @tutorialkit/custom.css",
+      "run_records": "tests/reports/run-records.json = 64条（32 default exit0 + 32 debug exit1）；live /health 200，:4321 302(首课重定向)",
+      "live_check": "curl 8765/health={ok:true}；curl 4321/=HTTP302"
+    },
+    "pending_defects_author_fixing": [
+      "导航按 getCollection 文件系统顺序排序，未按 custom.lessonId 数值排序 → id22 Block forward 显示成第14（[...slug].astro L31-32 navItems 无 sort）",
+      "正文裸长URL横向溢出",
+      "后端: do_POST 无 Origin/Host 拒绝（text/plain fetch 可绕过preflight直接执行代码=CSRF-to-RCE）、Content-Length无上限、communicate先全收集再截断、_current_proc单槽与MAX_CONCURRENT=2 stop竞态、kill未杀进程组"
+    ],
+    "note": "后端/导航/溢出三项 parent已要求作者修，本报告不重复展开；课程内容覆盖与准确性结论不变"
+  },
+  "final_recheck": {
+    "date": "2026-10-30 (返修后终验)",
+    "coverage": {
+      "bigram.py": "79/79 = 100.0%",
+      "gpt.py": "155/155 = 100.0%",
+      "uncovered": []
+    },
+    "repairs_verified_landed": [
+      "16 triu exercise.solution 已改为：row0 不屏蔽、最后一行除对角全-inf、'反向GPT'",
+      "20 补 gpt.py 109-110 __init__/super().__init__() 及 107-108 docstring",
+      "14 'transponse' 已消除",
+      "22 数值改为'约0.27'（实测0.2667/0.2614）",
+      "30 补 gpt.py 206-208 训练循环头",
+      "01 补 gpt.py L1-3 import statements",
+      "05 补 bigram L44；11 补 bigram L52；07 补 bigram L75"
+    ],
+    "independent_smoke_rerun": "返修后重跑 60/60 PASS（30课 default exit0 + debug exit1），无回归",
+    "backend_security_tests": {
+      "source_verified": "加固版 runner_server.py：Host白名单{127.0.0.1:8765,localhost:8765}；Origin缺失/非法→403；非application/json→415；无Content-Length→411；>64KB→413；GET /stop→405（POST+Origin才放行）；MAX_CONCURRENT=1；流式输出到上限即kill；start_new_session+killpg(SIGKILL)；shutil.rmtree 自清理",
+      "live_tests_pass": {
+        "evil Origin→403": true,
+        "no Origin→403": true,
+        "text/plain+合法Origin→415": true,
+        "legit run→200": true,
+        "GET /stop→405": true,
+        "POST /stop+Origin→200": true,
+        "oversize>64KB→413": true,
+        "no Content-Length→411": true,
+        "300KB输出→truncated=True 0.1s即kill": true,
+        "并发请求→'服务器忙'单并发拒绝": true
+      },
+      "note": "30s sleep 在40s超时内正常结束（未触发kill边界）；killpg 路径已在源码与超输出kill路径(over event)中验证"
+    },
+    "shell_and_ui": "真实TutorialKit合格（@tutorialkit/*1.6.0实装、contentSchema、MDX getCollection、defaultRoutes:false）；导航已改为 nav-order.json 显式 order 排序；browser-03/04 截图在 tests/reports",
+    "final_verdict": "PASS（课程内容覆盖100%、60/60独立实跑通过、后端防护live测试全过；0严重0中等遗留）"
+  }
+}

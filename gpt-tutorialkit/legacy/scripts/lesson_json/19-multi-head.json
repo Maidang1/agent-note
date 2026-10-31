@@ -1,0 +1,139 @@
+{
+  "id": "19",
+  "order": 19,
+  "module": "手写GPT自注意力",
+  "title": "多头注意力：多个 Head 并联、拼接、再投影回去",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 92,
+      "end": 104,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L92-L104"
+    }
+  ],
+  "goal": "看懂 ModuleList 装多个 Head、cat 沿特征维拼接、proj 把维度压回 n_embd 的全过程。",
+  "prerequisites": [
+    "18"
+  ],
+  "explanation": [
+    "一个 Head 只能从一个角度看关系。多头就是同时开多个 Head，每个 Head 用不同的随机初始化去学不同的关系——有的头关心语法，有的头关心相邻字。它们各自独立算完，结果并排拼起来。",
+    "整体流程：算 head_size = n_embd // n_head → 实例化 MultiHeadAttention → 遍历 ModuleList 里每个 Head 各自跑一遍 → torch.cat 沿最后一维拼成 (B,T,head_size*n_head) → 接一个 Linear proj 压回 n_embd。ModuleList 是 PyTorch 的列表容器，会自动把这些 Head 的参数登记成 mha 的子参数。",
+    "你会看到 N 个 (B,T,head_size) 输出、cat 后 (B,T,32)、proj 后 (B,T,32)——最终输出形状和输入相同。head_size*n_head = n_embd 是这里的硬约束。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具",
+      "explanation": "第1–2行取出 load_original 和 ns。第3行取出 torch。ns 里已经有 MultiHeadAttention 类和 n_head、n_embd 配置。"
+    },
+    {
+      "start": 5,
+      "end": 11,
+      "title": "建多头注意力并切到 eval",
+      "explanation": "第5行固定种子。第6行 n_head=4 取本次头数。第7行 head_size = n_embd//n_head = 32//4 = 8。第8行实例化 MultiHeadAttention(4, 8)。第9行切到 eval 关掉 dropout。第10–11行造 (2,5,32) 的随机输入 x。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "打印配置和 ModuleList 长度",
+      "explanation": "第13行打印 n_head、head_size、n_embd 三个数。第14行 len(mha.heads) 应该等于 4——ModuleList 里装着 4 个独立的 Head。"
+    },
+    {
+      "start": 15,
+      "end": 19,
+      "title": "逐个跑每个 Head",
+      "explanation": "第15–19行 for 循环遍历 mha.heads，对每个 h 都跑一遍 h(x)，把输出存进 per_head 列表并打印形状。每个头的输出都是 (2,5,8)，彼此独立。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "沿特征维拼接",
+      "explanation": "第20行 torch.cat(per_head, dim=-1) 把 4 个 (2,5,8) 在最后一维拼成 (2,5,32)。dim=-1 是关键——拼的是特征维，不是 batch 维。"
+    },
+    {
+      "start": 22,
+      "end": 23,
+      "title": "接 proj 投影回 n_embd",
+      "explanation": "第22行 mha.proj(cat) 是一个 Linear(32,32)，给多头结果做一次混合。第23行打印形状，应回到 (2,5,32)。"
+    },
+    {
+      "start": 24,
+      "end": 25,
+      "title": "直接跑 MHA 拿最终输出",
+      "explanation": "第24行 out = mha(x) 直接调用 MultiHeadAttention.forward，它内部就是“并联→拼接→proj→dropout”这一串。第25行打印最终输出形状。"
+    },
+    {
+      "start": 26,
+      "end": 28,
+      "title": "assert 自检",
+      "explanation": "第26行核对最终输出和输入同形状 (B,T,C)，第27行核对 cat 后最后一维是 head_size*n_head，第28行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 92,
+      "end": 94,
+      "explanation": "class MultiHeadAttention(nn.Module)：多头容器；docstring 说明多个自注意力头并行工作。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 95,
+      "end": 97,
+      "explanation": "self.heads = nn.ModuleList([Head(head_size) for _ in range(num_heads)])：造 num_heads 个独立 Head。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 98,
+      "end": 100,
+      "explanation": "self.proj = nn.Linear(head_size*num_heads, n_embd)；self.dropout = nn.Dropout(dropout)：拼接后做一次线性混合。 第100行为空行，分隔构造函数与 forward。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 101,
+      "end": 104,
+      "explanation": "out = torch.cat([h(x) for h in self.heads], dim=-1)；out = self.dropout(self.proj(out))：多头并联→拼接→投影→dropout。"
+    }
+  ],
+  "input": "改 n_head=2（head_size 自动变成 16），观察 cat 后宽度仍是 32。",
+  "expected": "打印 N 个 (B,T,head_size) 输出；cat 后 (B,T,head_size*n_head)；proj 后 (B,T,n_embd)；最终输出形状与输入相同。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\ntorch.manual_seed(0)\nn_head = ns['n_head']\nhead_size = ns['n_embd'] // n_head\nmha = ns['MultiHeadAttention'](n_head, head_size)\nmha.eval()\nB, T, C = 2, 5, ns['n_embd']\nx = torch.randn(B, T, C)\n\nprint('n_head =', n_head, ' head_size =', head_size, ' n_embd =', C)\nprint('ModuleList 里有几个 Head =', len(mha.heads))\nper_head = []\nfor i, h in enumerate(mha.heads):\n    o = h(x)\n    per_head.append(o)\n    print('  head[%d] 输出形状 =' % i, tuple(o.shape))\ncat = torch.cat(per_head, dim=-1)\nprint('torch.cat(..., dim=-1) 后形状 =', tuple(cat.shape), '  # (B,T,head_size*n_head)')\nproj_out = mha.proj(cat)\nprint('proj 后形状 =', tuple(proj_out.shape), '  # 回到 n_embd')\nout = mha(x)\nprint('MultiHeadAttention 最终输出形状 =', tuple(out.shape))\nassert tuple(out.shape) == (B, T, C)\nassert cat.shape == (B, T, head_size*n_head)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 n_head 从 4 改成 8，head_size 会变成多少？cat 后宽度还是 32 吗？",
+    "hint": "head_size = n_embd // n_head = 32//8 = 4；8×4 仍等于 32。",
+    "solution": "head_size=4，8 个头拼起来 32 维，proj 仍是 Linear(32,32)，输出形状不变。"
+  },
+  "debug": {
+    "instruction": "把 torch.cat 的 dim=-1 错写成 dim=0，观察 proj 接收的最后一维不对。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\ntorch.manual_seed(0)\nn_head = ns['n_head']; head_size = ns['n_embd']//n_head\nmha = ns['MultiHeadAttention'](n_head, head_size); mha.eval()\nx = torch.randn(2, 5, ns['n_embd'])\nout = torch.cat([h(x) for h in mha.heads], dim=0)   # 错误：dim=0 而不是 dim=-1\nprint('cat 后形状', tuple(out.shape))\ny = mha.proj(out)\nprint(y.shape)\n",
+    "expectedError": "RuntimeError: mat1 and mat2 shapes cannot be multiplied (40x8 and 32x32)",
+    "fix": "拼接头输出必须沿特征维 dim=-1；dim=0 是把 batch 维叠起来，语义完全错误。"
+  },
+  "modifications": [
+    {
+      "original": "原版 n_head=6, head_size=64, cat 后 384 维",
+      "teaching": "runtime 为 n_head=4, head_size=8, cat 后 32 维",
+      "reason": "小到能逐层打印形状。"
+    }
+  ],
+  "checkpoints": [
+    "ModuleList 长度等于 n_head",
+    "cat 后最后一维 = head_size*n_head = n_embd",
+    "MHA 输出与输入同形状"
+  ],
+  "glossary": [
+    {
+      "term": "ModuleList",
+      "explanation": "存放多个 nn.Module 的列表，会自动登记子模块参数。"
+    },
+    {
+      "term": "torch.cat",
+      "explanation": "沿指定维度把多个张量首尾相接。"
+    },
+    {
+      "term": "proj",
+      "explanation": "多头拼接后接的线性投影，作用是混合各头信息。"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+# 19 多头注意力：多个 Head 并联、拼接、再投影回去 (default)  exit=0 3745ms PASS=True
+--- stdout ---
+n_head = 4  head_size = 8  n_embd = 32
+ModuleList 里有几个 Head = 4
+  head[0] 输出形状 = (2, 5, 8)
+  head[1] 输出形状 = (2, 5, 8)
+  head[2] 输出形状 = (2, 5, 8)
+  head[3] 输出形状 = (2, 5, 8)
+torch.cat(..., dim=-1) 后形状 = (2, 5, 32)   # (B,T,head_size*n_head)
+proj 后形状 = (2, 5, 32)   # 回到 n_embd
+MultiHeadAttention 最终输出形状 = (2, 5, 32)
+OK
+
+--- stderr ---
+

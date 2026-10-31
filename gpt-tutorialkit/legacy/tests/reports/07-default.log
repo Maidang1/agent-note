@@ -1,0 +1,13 @@
+# 07 forward：查表得到logits，带不带targets算两种事 (default)  exit=0 3275ms PASS=True
+--- stdout ---
+输入 idx xb 形状: (4, 8) (B, T) 整数下标
+不带 targets: logits 形状 (4, 8, 65)  loss = None
+带 targets: logits 形状 (32, 65) (B*T, C，已被view摊平)
+loss 维数: 0 值 = 4.7051
+手动查表 (B,T,C): (4, 8, 65)
+forward 解包 B,T,C = 4 8 65 (应对照 4 8 65 )
+
+--- stderr ---
+<string>:12: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+

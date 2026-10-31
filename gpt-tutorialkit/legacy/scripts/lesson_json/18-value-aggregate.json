@@ -1,0 +1,123 @@
+{
+  "id": "18",
+  "order": 18,
+  "module": "手写GPT自注意力",
+  "title": "把注意力权重乘到 value 上：Head 的完整输出",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 88,
+      "end": 90,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L88-L90"
+    }
+  ],
+  "goal": "看懂 out = wei @ v 是怎么把每个位置的输出变成历史 value 的加权平均，并和 Head.forward 对拍。",
+  "prerequisites": [
+    "16"
+  ],
+  "explanation": [
+    "前面算出的 wei 是一组权重：位置 i 应该用几分力气去参考位置 j。现在终于要把这组权重用到真正的内容上——这个内容就是 v，由 h.value(x) 投影出来。out = wei @ v 的意思是：对每个输出位置 i，把所有历史位置 j 的 v[j] 按 wei[i,j] 加权求和。因为 wei 上三角为 0，i 只能加权 j≤i 的 v，未来不会混进来。",
+    "整体流程：先用 h.eval() 关掉 dropout（否则每次跑结果会随机不同）→ 直接调 h(x) 拿到模型输出 out → 手动复现 v、wei、out_manual 三步 → 逐位置对比。v 和 k/q 形状一样都是 (B,T,head_size)，但它们来自不同的 Linear——key/query 用来算相似度，value 用来提供被加权的内容。",
+    "你会看到 out 形状是 (B,T,head_size)；手动 wei@v 和模型输出 allclose；逐位置最大差为 0。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备辅助工具",
+      "explanation": "第1–3行取出 load_original、ns、torch。第4行取出 F，后面要用 F.softmax。"
+    },
+    {
+      "start": 6,
+      "end": 11,
+      "title": "建 Head 并切到 eval 模式",
+      "explanation": "第6–8行固定种子、建 head_size=8 的 Head。第9行 h.eval() 关掉 dropout，让后续结果可复现。第10–11行用 B=1、T=4 造一段随机输入 x。"
+    },
+    {
+      "start": 13,
+      "end": 14,
+      "title": "直接跑 Head 拿模型输出",
+      "explanation": "第13行 out = h(x) 直接调用 Head.forward，拿到模型自己算的结果。第14行打印形状，应为 (1,4,8)。"
+    },
+    {
+      "start": 16,
+      "end": 21,
+      "title": "手动复现 v、wei、out_manual",
+      "explanation": "第16行 v = h.value(x) 取出内容投影。第17行再算 k 和 q。第18行乘上缩放因子，第19行用 tril 把未来位置填 -inf，第20行 softmax 得到权重 wei。第21行 out_manual = wei @ v 就是手动复现的输出。"
+    },
+    {
+      "start": 22,
+      "end": 22,
+      "title": "对比手动与模型输出",
+      "explanation": "第22行用 allclose 核对 out 和 out_manual。如果 Head.forward 没有隐藏的魔法，这里应该返回 True。"
+    },
+    {
+      "start": 24,
+      "end": 27,
+      "title": "逐位置手算一个加权平均",
+      "explanation": "第24–27行 for 循环对每个时间步 t：取权重行 row=wei[0,t]，把它和 v[0] 按位相乘再沿特征维求和，得到 s；然后和 out[0,t] 比最大差。这就是“按权重把多个历史向量混合成一个向量”的展开写法。"
+    },
+    {
+      "start": 28,
+      "end": 29,
+      "title": "assert 自检",
+      "explanation": "第28行再次用 allclose 硬核对，第29行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 88,
+      "end": 88,
+      "explanation": "v = self.value(x)：把输入投影到 value 空间，形状仍是 (B,T,head_size)。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 89,
+      "end": 89,
+      "explanation": "out = wei @ v：(B,T,T) @ (B,T,head_size) -> (B,T,head_size)，每个输出位置是历史 value 的加权和。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 90,
+      "end": 90,
+      "explanation": "return out：把这一个头的结果交回 MultiHeadAttention。"
+    }
+  ],
+  "input": "改 T=3 或 head_size=4，观察 out 形状始终是 (B,T,head_size)。",
+  "expected": "Head 输出形状 (B,T,head_size)；手动 wei@v 与模型输出 allclose；逐位置手算最大差为 0。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nF = ns['F']\n\ntorch.manual_seed(0)\nhead_size = 8\nh = ns['Head'](head_size)\nh.eval()\nB, T, C = 1, 4, ns['n_embd']\nx = torch.randn(B, T, C)\n\nout = h(x)\nprint('Head 输出形状 =', tuple(out.shape), '  # (B,T,head_size)')\n\nv = h.value(x)\nk = h.key(x); q = h.query(x)\nwei = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5\nwei = wei.masked_fill(h.tril[:T,:T]==0, float('-inf'))\nwei = F.softmax(wei, dim=-1)\nout_manual = wei @ v\nprint('手动 wei @ v 与 Head 前向是否一致: ', torch.allclose(out, out_manual, atol=1e-6))\n\nfor t in range(T):\n    row = wei[0, t]\n    s = (row.view(-1,1) * v[0]).sum(0)\n    print('t=%d  手算 out 与模型 out 最大差 =' % t, round((s - out[0,t]).abs().max().item(), 6))\nassert torch.allclose(out, out_manual, atol=1e-6)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 v 换成 h.key(x)（用 key 当 value），看看输出形状对不对、数值和原来差多少。",
+    "hint": "形状一样，不会报错，但语义变成“用 key 当内容”，数值会不同。",
+    "solution": "形状仍是 (B,T,head_size)，但 (out - h(x)).abs().max() 明显大于 0，因为 value 和 key 是两套独立权重。"
+  },
+  "debug": {
+    "instruction": "在 wei @ v 前多做一次 v.transpose，观察矩阵乘形状不匹配。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nfrom torch.nn import functional as F\ntorch.manual_seed(0)\nh = ns['Head'](8); h.eval()\nx = torch.randn(1, 4, ns['n_embd'])\nv = h.value(x)\nk = h.key(x); q = h.query(x)\nwei = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5\nwei = wei.masked_fill(h.tril[:4,:4]==0, float('-inf'))\nwei = F.softmax(wei, dim=-1)\nout = wei @ v.transpose(-2,-1)   # 错误：v 多转置了一次\nprint(out.shape)\n",
+    "expectedError": "RuntimeError: Expected size for first two dimensions of batch2 tensor to be: [B, T] but got: [B, head_size]",
+    "fix": "v 的形状是 (B,T,head_size)，直接和 (B,T,T) 的 wei 相乘即可，不要再 transpose。"
+  },
+  "modifications": [
+    {
+      "original": "原版 forward 里 v 和 wei 在同一行函数里",
+      "teaching": "本步把 v、wei、out 三步拆开并和模型对拍",
+      "reason": "确认 Head 的 forward 没有隐藏的魔法。"
+    }
+  ],
+  "checkpoints": [
+    "out 形状 (B,T,head_size)",
+    "手动 wei@v 与模型输出 allclose",
+    "t=0 时 out[0] 等于 v[0] 自身"
+  ],
+  "glossary": [
+    {
+      "term": "value",
+      "explanation": "被注意力加权求和的内容向量，和 key/query 是不同的投影。"
+    },
+    {
+      "term": "加权平均 weighted average",
+      "explanation": "按权重把多个向量混合成一个向量；权重和为 1。"
+    }
+  ]
+}

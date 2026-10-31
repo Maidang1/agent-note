@@ -1,0 +1,11 @@
+# 20 FeedFoward：先扩 4 维、加非线性、再压回来 (debug)  exit=1 3745ms PASS=True
+--- stdout ---
+只跑到 ReLU 的输出形状 = (2, 5, 128)
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 9, in <module>
+    assert out.shape == x.shape, '形状没有回到 n_embd'
+           ^^^^^^^^^^^^^^^^^^^^
+AssertionError: 形状没有回到 n_embd
+

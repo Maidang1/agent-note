@@ -1,0 +1,129 @@
+{
+  "id": "26",
+  "order": 26,
+  "module": "GPT前向传播",
+  "title": "穿过 n_layer 个 Block，最后变成每个字的分数",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 167,
+      "end": 169,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L167-L169"
+    },
+    {
+      "file": "gpt.py",
+      "start": 179,
+      "end": 179,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L179-L179"
+    }
+  ],
+  "goal": "看懂 x 依次经过 blocks、ln_f、lm_head，形状从 (B,T,n_embd) 变成 logits (B,T,vocab_size)。",
+  "prerequisites": [
+    "25"
+  ],
+  "explanation": [
+    "上一步得到了带位置信息的特征 x，形状 (B,T,32)。这步把后半段 forward 走完：x 先依次穿过 n_layer=2 个 Block，再经过最后的归一化 ln_f，最后由 lm_head 投影成每个位置对下一个字符的打分数。整条路形状从 (B,T,32) 变成 (B,T,65)。",
+    "Block 不改变形状，它只是反复打磨每个位置的向量：一层做注意力交流、一层做前馈计算，进出都是 (B,T,32)。ln_f 在出口前把每个 32 维向量的分布拉稳一次。lm_head 是一个线性层，把 32 维乘以矩阵变成 65 个数字，正好对应 65 种字符各得一分。",
+    "这 65 个数字叫 logits，是还没归一化的原始分数，可正可负；softmax 和算损失是后面的事。右侧手动把 blocks→ln_f→lm_head 三步拆开跑，每步打印形状，最后可和整段 forward 的输出对照。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备模型",
+      "explanation": "第1到4行和上一课一样：引入工具、取 ns、取 torch、造 model 并搬到设备。本步把 B 取成 1，一批只放一段文字，打印更清爽。"
+    },
+    {
+      "start": 5,
+      "end": 9,
+      "title": "走到带位置的特征 x",
+      "explanation": "第5行 B=1、T=block_size=8；第6行随机造 (1,8) 编号；第7、8行分别查字符表和位置表；第9行相加得到 x，形状 (1,8,32)。这几行就是上一课的结果，是后半段计算的起点。"
+    },
+    {
+      "start": 10,
+      "end": 11,
+      "title": "穿过所有 Block",
+      "explanation": "第10行 model.blocks(x) 让 x 依次经过 2 个 Block；每个 Block 内部做注意力交流和前馈计算，但进出形状不变。第11行打印，仍是 (1,8,32)。"
+    },
+    {
+      "start": 12,
+      "end": 13,
+      "title": "最后的归一化",
+      "explanation": "第12行 x = model.ln_f(x)，对每个 32 维向量做一次层归一化，让数字分布更稳；第13行打印，形状依旧 (1,8,32)。"
+    },
+    {
+      "start": 14,
+      "end": 15,
+      "title": "投影成每个字符的分数",
+      "explanation": "第14行 logits = model.lm_head(x)，把最后一维从 32 映到 vocab_size=65；第15行打印 (1,8,65)：每个时间步都给出了 65 个下一个字符的原始打分数。"
+    },
+    {
+      "start": 16,
+      "end": 17,
+      "title": "断言收尾",
+      "explanation": "第16行要求进 lm_head 前的 x 是 (B,T,32)，第17行要求 logits 是 (B,T,65)。可顺带用 model(idx) 一次跑完整个 forward，返回的 logits 形状应和这里手动三步一致。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 167,
+      "end": 167,
+      "explanation": "x = self.blocks(x)：依次通过所有 Transformer Block，形状保持 (B,T,n_embd)。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 168,
+      "end": 168,
+      "explanation": "x = self.ln_f(x)：最后一次层归一化，仍保持 (B,T,n_embd)。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 169,
+      "end": 169,
+      "explanation": "logits = self.lm_head(x)：投影到词表，得到 (B,T,vocab_size) 的打分。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 179,
+      "end": 179,
+      "explanation": "return logits, loss：把打分和（可选的）损失一起返回。"
+    }
+  ],
+  "input": "可改 B/T 观察批数和长度如何变化；n_embd 与 vocab_size 决定最后一维。",
+  "expected": "打印 blocks 后、ln_f 后、lm_head 后的张量形状；logits 最后一维等于词表大小。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nB, T = 1, ns['block_size']\nidx = torch.randint(ns['vocab_size'], (B, T), device=ns['device'])\ntok = model.token_embedding_table(idx)\npos = model.position_embedding_table(torch.arange(T, device=ns['device']))\nx = tok + pos\nx = model.blocks(x)\nprint('穿过 blocks 后:', tuple(x.shape))\nx = model.ln_f(x)\nprint('穿过 ln_f 后:', tuple(x.shape))\nlogits = model.lm_head(x)\nprint('lm_head 输出 logits:', tuple(logits.shape), '(B,T,vocab_size)')\nassert x.shape == (B, T, ns['n_embd'])\nassert logits.shape == (B, T, ns['vocab_size'])\n",
+  "exercise": {
+    "instruction": "用 model(idx) 一次前向（不带 targets），对比它返回的 logits 形状是否和手动三步一致。",
+    "hint": "logits2, loss2 = model(idx, None)。",
+    "solution": "loss2 为 None，logits2 形状仍是 (B,T,vocab_size)。"
+  },
+  "debug": {
+    "instruction": "给 blocks 喂一个最后维度不对的张量，观察线性层维度不匹配。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nbad = torch.randn(1, ns['block_size'], ns['n_embd'] + 1, device=ns['device'])\nprint('最后一维故意多1')\nmodel.blocks(bad)\n",
+    "expectedError": "RuntimeError",
+    "fix": "blocks/ln_f 期望最后一维等于 n_embd；输入必须是 embedding 输出的 (B,T,n_embd)。"
+  },
+  "modifications": [
+    {
+      "original": "n_layer=6 个 Block",
+      "teaching": "n_layer=2",
+      "reason": "层数多少不改变形状规则，少几层跑得更快。"
+    }
+  ],
+  "checkpoints": [
+    "blocks 不改变 (B,T,n_embd)",
+    "lm_head 输出最后一维=词表大小",
+    "logits 与手动前向一致"
+  ],
+  "glossary": [
+    {
+      "term": "logits",
+      "explanation": "模型输出的未归一化分数，softmax 之前的原始数值。"
+    },
+    {
+      "term": "层归一化 LayerNorm",
+      "explanation": "在最后一维上做均值方差归一化，稳定每层数值分布。"
+    }
+  ]
+}

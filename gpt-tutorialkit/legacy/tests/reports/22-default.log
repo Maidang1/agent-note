@@ -1,0 +1,11 @@
+# 22 Block forward：预归一化 + 两次残差连接 (default)  exit=0 3985ms PASS=True
+--- stdout ---
+输入形状 = (2, 5, 32)  输出形状 = (2, 5, 32)
+形状不变?  True
+和手动两步残差是否一致:  True
+注意力残差 delta 范数 / 输入范数 = 0.2667
+前馈残差 delta 范数 / 输入范数 = 0.2614
+OK
+
+--- stderr ---
+

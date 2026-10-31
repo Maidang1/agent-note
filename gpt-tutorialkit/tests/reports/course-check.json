@@ -1,0 +1,375 @@
+[
+  {
+    "lesson": "01-setup",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "本课每步的练习题数 = batch_size × block_size",
+      "原版每步的练习题数",
+      "每个注意力头的宽度 head_size",
+      "重设种子后两次随机抽样完全相同"
+    ]
+  },
+  {
+    "lesson": "02-vocab",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.5,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "chars 是排好序、不重复的字符列表",
+      "vocab_size 是字符表大小"
+    ]
+  },
+  {
+    "lesson": "03-encode-decode",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "stoi / itos 两张表和原版一致",
+      "encode 把字符串变成整数列表",
+      "decode(encode(s)) 能还原整段原文"
+    ]
+  },
+  {
+    "lesson": "04-train-val",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.8,
+    "starter_seconds": 2.3,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "data 是整本书编码后的一维 long 张量",
+      "n 是前 90% 的长度",
+      "train_data / val_data 按 n 切开、不重叠、不打乱"
+    ]
+  },
+  {
+    "lesson": "05-get-batch",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.7,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "get_batch 返回两个 (B, T) 的整数张量",
+      "y 恰好是 x 整体右移一格",
+      "同一随机种子下，train / val 两种取法都和原版逐元素相同"
+    ]
+  },
+  {
+    "lesson": "06-bigram-table",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.7,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "token_embedding_table 是 vocab_size × vocab_size 的 nn.Embedding",
+      "同一随机种子下，初始权重和原版完全相同",
+      "n_params 数对了"
+    ]
+  },
+  {
+    "lesson": "07-bigram-logits",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "forward 返回 (B, T, vocab_size) 的 logits，且和原版相同"
+    ]
+  },
+  {
+    "lesson": "08-cross-entropy",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "带 targets 时：返回摊平的 logits 和与原版相同的 loss",
+      "不带 targets 时：logits 保持 (B, T, C)，loss 为 None",
+      "手算的交叉熵和 F.cross_entropy 一致"
+    ]
+  },
+  {
+    "lesson": "09-generate",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.3,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "generate 每轮接一个字符：(B, T) → (B, T + max_new_tokens)",
+      "同一随机种子、同一权重下，生成的字符和原版完全相同"
+    ]
+  },
+  {
+    "lesson": "10-train-step",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 4.5,
+    "starter_seconds": 4.4,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "train_step 返回这一步的 loss",
+      "走一步之后，参数和原版的一步完全相同",
+      "连续走 5 步也和原版相同（梯度没有越攒越多）"
+    ]
+  },
+  {
+    "lesson": "11-estimate-loss",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "返回 {\"train\": 平均 loss, \"val\": 平均 loss}，每个 split 各评估 eval_iters 批",
+      "评估时关闭了梯度（@torch.no_grad()）",
+      "评估时是 eval 模式，结束后切回 train 模式",
+      "同一随机种子下，两个平均 loss 和原版相同"
+    ]
+  },
+  {
+    "lesson": "12-train-loop",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 6.4,
+    "starter_seconds": 4.3,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "训练后 val loss 明显下降（< 2.7）",
+      "同一随机种子下，40 步训练后的权重与原版循环完全相同（含评估的时机）"
+    ]
+  },
+  {
+    "lesson": "13-prefix-average",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.0,
+    "starter_seconds": 2.4,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "写法 1（循环）算出前缀平均",
+      "写法 2（下三角矩阵乘法）结果相同",
+      "写法 3（masked_fill + softmax）结果相同，且权重每行和为 1、上三角为 0"
+    ]
+  },
+  {
+    "lesson": "14-head-init",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.5,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "key / query / value 都是 n_embd → head_size、无 bias 的 Linear",
+      "tril 是 buffer，不是可训练参数",
+      "同一随机种子下，初始化和原版完全相同（含创建顺序）"
+    ]
+  },
+  {
+    "lesson": "15-attention-scores",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.5,
+    "starter_seconds": 2.4,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "Head.forward 输出 (B, T, head_size)，且和原版相同",
+      "缩放后点积的方差回到 1 附近"
+    ]
+  },
+  {
+    "lesson": "16-causal-mask",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.1,
+    "starter_seconds": 2.3,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "位置 t 的输出只取决于 0..t 的输入（看不到未来）",
+      "T 小于 block_size 时也能运行，且和原版相同"
+    ]
+  },
+  {
+    "lesson": "17-weighted-values",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "eval 模式下 Head 的输出和原版相同",
+      "train 模式下（同一随机种子）也和原版相同：dropout 加在注意力权重上"
+    ]
+  },
+  {
+    "lesson": "18-multi-head",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "heads 是装着 num_heads 个 Head 的 nn.ModuleList",
+      "同一随机种子下，初始化和原版完全相同",
+      "forward 在 eval / train 模式下都和原版相同"
+    ]
+  },
+  {
+    "lesson": "19-feed-forward",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "self.net 依次是 Linear(32→128)、ReLU、Linear(128→32)、Dropout",
+      "同一随机种子下，初始化和 forward 都和原版相同"
+    ]
+  },
+  {
+    "lesson": "20-block",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.5,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "Block 有 sa / ffwd / ln1 / ln2 四个部件，初始化和原版相同",
+      "forward 是「预归一化 + 两次残差」，eval / train 模式都和原版相同",
+      "两个子层的输出为 0 时，Block 原样传出输入（残差连接）"
+    ]
+  },
+  {
+    "lesson": "21-gpt-init",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.5,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "五个部件的形状都对",
+      "同一随机种子下，整个模型的初始权重和原版完全相同"
+    ]
+  },
+  {
+    "lesson": "22-init-weights",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.6,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "所有 Linear 的 bias 为 0，Linear / Embedding 权重的标准差约 0.02",
+      "同一随机种子下，初始化结果和原版完全相同"
+    ]
+  },
+  {
+    "lesson": "23-embeddings",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.3,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "forward 和原版相同（T = block_size 和 T 更短两种情况）"
+    ]
+  },
+  {
+    "lesson": "24-gpt-logits",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.4,
+    "starter_seconds": 2.3,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "不带 targets：返回 (B, T, vocab_size) 的 logits 和 None，与原版相同",
+      "带 targets：返回摊平的 logits 和 loss，train / eval 模式都与原版相同"
+    ]
+  },
+  {
+    "lesson": "25-gpt-generate",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 2.6,
+    "starter_seconds": 2.7,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "能生成超过 block_size 的长度",
+      "同一随机种子、同一权重下，生成结果和原版完全相同"
+    ]
+  },
+  {
+    "lesson": "26-params-optimizer",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 4.5,
+    "starter_seconds": 1.9,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "本课模型的参数量",
+      "每个 Block 的参数量公式",
+      "优化器是 AdamW，学习率为 learning_rate，管着模型的全部参数",
+      "原版尺寸 GPT 的参数量"
+    ]
+  },
+  {
+    "lesson": "27-train-gpt",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 18.2,
+    "starter_seconds": 4.2,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "训练后 val loss 低于 2.35（比 Bigram 的极限 ~2.49 更好）",
+      "同一随机种子下，6 步训练（含评估时机）与原版循环完全相同"
+    ]
+  },
+  {
+    "lesson": "28-sample-save",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 12.9,
+    "starter_seconds": 10.2,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "sample 返回以 prompt 开头、多出 max_new_tokens 个字符的字符串",
+      "生成时处于 eval 模式（与原版 eval 模式下的生成完全相同），结束后切回 train",
+      "gpt.pt 已保存，读回的 model2 与 model 参数完全相同"
+    ]
+  },
+  {
+    "lesson": "29-capstone",
+    "ok": true,
+    "problems": [],
+    "solution_seconds": 13.5,
+    "starter_seconds": 3.0,
+    "checks": [
+      "整份代码从头跑到尾不报错",
+      "超参数保持骨架给定的值（判题器按这套超参数和原版比对）",
+      "字符表、encode / decode 和原版相同",
+      "train_data / val_data 按 9:1 切分，和原版相同",
+      "get_batch：同一随机种子下，两种 split 抽出的 (x, y) 和原版相同",
+      "Head：初始化和前向（eval / train）与原版相同",
+      "MultiHeadAttention：初始化和前向与原版相同",
+      "FeedFoward（原版就是这个拼写）：初始化和前向与原版相同",
+      "Block：初始化和前向与原版相同",
+      "GPTLanguageModel：初始化、带 / 不带 targets 的前向与原版相同",
+      "generate：同一种子、同一权重下，生成超过 block_size 的长度，结果和原版相同",
+      "训练后 val loss 低于 2.45（比 Bigram 的极限 ~2.49 更好）",
+      "estimate_loss：同一权重、同一种子下与原版相同，结束后模型回到 train 模式"
+    ]
+  }
+]

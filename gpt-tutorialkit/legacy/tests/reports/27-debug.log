@@ -1,0 +1,17 @@
+# 27 有没有答案算两种账：targets 分支与交叉熵 (debug)  exit=1 4823ms PASS=True
+--- stdout ---
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 7, in <module>
+    model(idx, bad_target)
+    ~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/runtime/tutorial_runtime/_originals/gpt.py", line 176, in forward
+    targets = targets.view(B*T)
+RuntimeError: shape '[16]' is invalid for input of size 18
+

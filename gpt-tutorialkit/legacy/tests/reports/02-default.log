@@ -1,0 +1,13 @@
+# 02 读取原始文字，数出字符表 (default)  exit=0 3576ms PASS=True
+--- stdout ---
+读取结果类型: str
+实际文件字符总数: 1115394
+实际vocab_size: 65
+字符表: "\n !$&',-.3:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+观察窗口输入: 'First Citizen:\nBefore we proceed any further, hear me speak.\n\nAll:\nSpeak, speak.\n\nFirst Citizen:\nYou'
+小字符串输入: 'hello!\n'
+去重排序输出: ['\n', '!', 'e', 'h', 'l', 'o']
+小字符串长度与种类数: 7 6
+
+--- stderr ---
+

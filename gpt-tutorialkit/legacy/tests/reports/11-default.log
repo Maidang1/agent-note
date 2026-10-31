@@ -1,0 +1,10 @@
+# 11 estimate_loss：no_grad下抽样平均train/val成绩 (default)  exit=0 3503ms PASS=True
+--- stdout ---
+eval_iters = 3
+手动 train 各批loss = [4.705, 4.511, 4.754] 平均=4.6567
+手动 val   各批loss = [4.92, 4.422, 4.944] 平均=4.7620
+estimate_loss 返回: {'train': 4.757, 'val': 4.7322}
+函数结束后 model.training = True (应为True)
+
+--- stderr ---
+

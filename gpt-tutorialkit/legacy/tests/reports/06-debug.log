@@ -1,0 +1,9 @@
+# 06 BigramLanguageModel：一张查表的Embedding表 (debug)  exit=1 2991ms PASS=True
+--- stdout ---
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 3, in <module>
+    m = ns['BigramLanguageModel']()
+TypeError: BigramLanguageModel.__init__() missing 1 required positional argument: 'vocab_size'
+

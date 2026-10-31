@@ -1,0 +1,93 @@
+---
+import { getCollection } from 'astro:content';
+import fs from 'node:fs';
+import path from 'node:path';
+import Layout from '../layouts/Layout.astro';
+import PythonRunner from '../components/PythonRunner';
+import CourseSidebar from '../components/CourseSidebar.astro';
+import { lessons, modules, refLabel, refSnippet, SOURCE_URL } from '../lib/course';
+
+// content 集合的 entry.id 形如 `m1-data/05-get-batch/content.md`；URL 去掉 `/content.md`。
+export async function getStaticPaths() {
+  const all = await getCollection('tutorial');
+  return all
+    .filter((l) => l.data.type === 'lesson')
+    .map((l) => ({ params: { slug: l.id.replace(/\/content\.md$/, '') }, props: { lesson: l } }));
+}
+
+const { lesson } = Astro.props;
+if (lesson.data.type !== 'lesson') throw new Error('当前页面必须对应课程正文');
+const { Content } = await lesson.render();
+
+const slug = lesson.id.replace(/\/content\.md$/, '');
+const idx = lessons.findIndex((l) => l.slug === slug);
+if (idx < 0) throw new Error(`nav-order.json 里没有 ${slug}，请重跑 scripts/build_course.py`);
+const meta = lessons[idx];
+const prev = lessons[idx - 1];
+const next = lessons[idx + 1];
+const moduleIndex = modules.findIndex((m) => m.id === meta.module);
+const module = modules[moduleIndex];
+const isModuleEnd = !next || next.module !== meta.module;
+
+const lessonDir = path.resolve('./src/content/tutorial', slug);
+const initialCode = fs.readFileSync(path.join(lessonDir, '_files', 'lesson.py'), 'utf-8');
+const solutionCode = fs.readFileSync(path.join(lessonDir, '_solution', 'lesson.py'), 'utf-8');
+const originals = meta.refs.map((r) => ({
+  label: refLabel(r),
+  url: `${SOURCE_URL}/${r.file}#L${r.start}-L${r.end}`,
+  start: r.start,
+  code: refSnippet(r),
+}));
+---
+
+<Layout title={`${meta.order}. ${meta.title} · 手写 GPT`}>
+  <div class="lesson-shell">
+    <CourseSidebar current={meta.id} />
+
+    <main class="lesson-reading" id="main-content" tabindex="-1">
+      <article class="prose">
+        <header class="lesson-header">
+          <div class="lesson-crumbs">
+            <span class="badge badge-secondary">模块 {moduleIndex + 1} · {module.title}</span>
+            <span class="lesson-count">第 {meta.order} / {lessons.length} 课</span>
+          </div>
+          <h1>{meta.title}</h1>
+          <p class="lesson-goal">{meta.goal}</p>
+          {meta.refs.length > 0 && (
+            <p class="lesson-refs">
+              对应原版
+              {meta.refs.map((r) => (
+                <a href={`/map#${r.file.replace('.py', '')}-${r.start}`} class="badge badge-outline mono">{refLabel(r)}</a>
+              ))}
+            </p>
+          )}
+        </header>
+
+        <Content />
+
+        {isModuleEnd && (
+          <aside class="card milestone">
+            <div class="milestone-label">模块 {moduleIndex + 1} 里程碑</div>
+            <p>{module.milestone}。在<a href="/map">源码地图</a>上看看你已经亲手写过原版的哪些行。</p>
+          </aside>
+        )}
+
+        <nav class="lesson-pager" aria-label="上一课 / 下一课">
+          {prev ? <a href={`/${prev.slug}`} class="btn btn-ghost">← {prev.title}</a> : <a href="/guide" class="btn btn-ghost">← 全貌导读</a>}
+          {next && <a href={`/${next.slug}`} class="btn btn-outline">{next.title} →</a>}
+        </nav>
+      </article>
+    </main>
+
+    <section class="lesson-runner-panel" aria-label="代码区">
+      <PythonRunner
+        client:load
+        lessonId={meta.id}
+        initialCode={initialCode}
+        solutionCode={solutionCode}
+        originals={originals}
+        next={next ? { href: `/${next.slug}`, title: next.title } : undefined}
+      />
+    </section>
+  </div>
+</Layout>

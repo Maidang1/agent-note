@@ -1,0 +1,10 @@
+# 32 扩展对比：Bigram 与 GPT 参数量，以及独立的权重存档与读取（非原版） (default)  exit=0 4497ms PASS=True
+--- stdout ---
+Bigram 参数量: 4225
+GPT 参数量: 29761
+GPT/Bigram 倍数: 7.0x
+已保存权重到: /tmp/gpt_ckpt.pt
+重新加载后参数一致: True
+
+--- stderr ---
+

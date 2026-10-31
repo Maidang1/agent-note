@@ -1,0 +1,144 @@
+{
+  "id": "13",
+  "order": 13,
+  "module": "手写GPT自注意力",
+  "title": "Head的构造函数：三个投影、一个下三角掩码、一个dropout",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 64,
+      "end": 74,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L64-L74"
+    }
+  ],
+  "goal": "看懂一个注意力头在 __init__ 里登记了哪些可训练参数、哪些只是固定查表，以及 bias=False 意味着什么。",
+  "prerequisites": [
+    "12"
+  ],
+  "explanation": [
+    "本节不训练模型，只把上一课见过的 Head 类从辅助运行时里取出来做一次“开箱体检”。整体流程是：load_original 装好 GPT 相关工具和 Head 类 → 用 head_size=8 新建一个 Head 实例 → 分别列出它的可训练参数和固定缓存 → 数参数总数并用公式验算。把 Head 想成一个小盒子：里面装着三块要学的数字板（key/query/value）、一张写死的座位表（tril），还有一个随机关闭开关（dropout）。",
+    "第1–2行的 load_original('gpt') 会把原版 gpt.py 里定义好的 Head 类、torch 工具、n_embd=32、block_size=8、dropout=0.1 等配置都装进 ns 这个“贴名标签的收纳盒”。Head 内部 __init__ 具体写了什么不在右侧展开；我们只从外面把它实例化，看它登记了哪些东西。",
+    "你会看到 key/query/value 三个权重形状都是 (8, 32)——因为 32 维特征被投影到 8 维；tril 是 8×8 的下三角 0/1 矩阵，它是 buffer 不是 parameter；三个 Linear 都没有 bias；可训练数字总共 3×32×8=768 个。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具并取出 torch",
+      "explanation": "第1行让 load_original 这个辅助加载工具可用。第2行选择 GPT，把原版数据、工具和 Head 类一起装进 ns；这一步不会自动跑完整原版训练。第3行从 ns 里取出 torch，后面才用它。"
+    },
+    {
+      "start": 5,
+      "end": 6,
+      "title": "设置 head_size 并实例化一个 Head",
+      "explanation": "第5行 head_size=8 是本次实验的头宽。第6行 h = ns['Head'](head_size) 从 ns 里取出 Head 类并新建一个实例；Head 的 __init__ 在辅助运行时内部，右侧没有把它的函数体贴出来。"
+    },
+    {
+      "start": 7,
+      "end": 10,
+      "title": "打印可训练参数列表",
+      "explanation": "第7行先打印本次 head_size 和 n_embd 方便对照。第9–10行 for 循环遍历 h.named_parameters()，把每个要学的数字板的名字、形状、是否需要梯度都打出来。你会看到 key.weight、query.weight、value.weight 三个 (8, 32) 张量；它们 requires_grad=True。"
+    },
+    {
+      "start": 11,
+      "end": 13,
+      "title": "打印固定 buffer 列表",
+      "explanation": "第12–13行遍历 h.named_buffers()，列出那些随模型保存但不参与梯度更新的张量。这里只会看到一个 tril，形状 (8, 8)；它就是上一节提到的下三角座位表。"
+    },
+    {
+      "start": 14,
+      "end": 16,
+      "title": "查看 tril 矩阵内容和 dropout 概率",
+      "explanation": "第15行直接打印 h.tril 的数值：对角线及下方是 1、上方是 0。第16行读出 h.dropout.p=0.1，确认这个随机关闭开关登记的丢弃概率；它本身没有可训练数字。"
+    },
+    {
+      "start": 17,
+      "end": 20,
+      "title": "数参数总数并与公式对照",
+      "explanation": "第17行 sum(p.numel() ...) 把所有参数张量的元素个数加起来。第19行 expect 按 3×n_embd×head_size 估算，第20行并排打印两边结果。因为 bias=False，每个 Linear 只有 weight 没有 bias 向量。"
+    },
+    {
+      "start": 21,
+      "end": 24,
+      "title": "三条 assert 自动核对",
+      "explanation": "assert 表示“这一条必须成立”。第21行核对参数总数等于估算值，第22行核对三个 Linear 的 bias 都是 None，第23行核对 tril 形状是 (block_size, block_size)。全部通过时才打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 64,
+      "end": 66,
+      "explanation": "class Head(nn.Module) 定义一个自注意力头；docstring 说明它是 one head of self-attention。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 67,
+      "end": 68,
+      "explanation": "def __init__(self, head_size) 是构造函数入口；super().__init__() 必须先调用，nn.Module 才会开始登记子模块。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 69,
+      "end": 71,
+      "explanation": "self.key/query/value = nn.Linear(n_embd, head_size, bias=False)：把32维特征投影到8维，三处都不要偏置项。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 72,
+      "end": 73,
+      "explanation": "register_buffer('tril', torch.tril(torch.ones(block_size, block_size)))：生成 block_size×block_size 的下三角矩阵，固定不可训练。 第73行为空行，分隔 buffer 与 dropout。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 74,
+      "end": 74,
+      "explanation": "self.dropout = nn.Dropout(dropout)：登记一个丢弃概率为0.1的随机层，具体行为在 forward 里才发生。"
+    }
+  ],
+  "input": "改 head_size 的值（例如 4 或 16），观察三个权重形状和参数总数如何按 3×n_embd×head_size 变化。",
+  "expected": "打印出 key/query/value 三个 (head_size, n_embd) 权重、8×8 tril 矩阵、dropout 概率 0.1；参数总数与 3×32×head_size 相等，bias 全为 None。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\nhead_size = 8\nh = ns['Head'](head_size)\nprint('head_size =', head_size, ' n_embd =', ns['n_embd'])\nprint('--- 可训练参数 (named_parameters) ---')\nfor name, p in h.named_parameters():\n    print(' ', name, tuple(p.shape), 'requires_grad=', p.requires_grad)\nprint('--- 缓存 buffer (register_buffer, 不参与训练) ---')\nfor name, b in h.named_buffers():\n    print(' ', name, tuple(b.shape))\nprint('tril 下三角矩阵内容:')\nprint(h.tril)\nprint('dropout 概率 p =', h.dropout.p)\ntotal = sum(p.numel() for p in h.parameters())\nprint('可训练参数总数 =', total)\nexpect = 3 * ns['n_embd'] * head_size\nprint('按 3 x Linear(n_embd=%d, head_size=%d, bias=False) 估算 =' % (ns['n_embd'], head_size), expect)\nassert total == expect\nassert h.key.bias is None and h.query.bias is None and h.value.bias is None\nassert tuple(h.tril.shape) == (ns['block_size'], ns['block_size'])\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把三个 nn.Linear 的 bias=False 改成 bias=True，再数一次参数总数，看看每个 Linear 多了几个数字。",
+    "hint": "bias=True 后每个 Linear 会多一个长度为 head_size 的 bias 向量。",
+    "solution": "改为 bias=True 后参数总数变成 3×32×8 + 3×8 = 792；h.named_parameters() 里会多出 key.bias/query.bias/value.bias 三个 (8,) 向量。"
+  },
+  "debug": {
+    "instruction": "故意在 __init__ 里不调用 super().__init__()，看 nn.Module 如何拒绝登记子模块。",
+    "code": "from tutorial_runtime import load_original\nimport torch.nn as nn\nns = load_original('gpt')\n\n# 错误示范：__init__ 里忘了调用 super().__init__()\nclass BadHead(nn.Module):\n    def __init__(self, head_size):\n        self.key = nn.Linear(ns['n_embd'], head_size, bias=False)\n        self.query = nn.Linear(ns['n_embd'], head_size, bias=False)\n        self.value = nn.Linear(ns['n_embd'], head_size, bias=False)\n\nb = BadHead(8)\nprint('BadHead 实例化完成')\n",
+    "expectedError": "AttributeError: cannot assign module before Module.__init__() call",
+    "fix": "在 __init__ 第一行加上 super().__init__()，让 nn.Module 的登记机制先初始化。"
+  },
+  "modifications": [
+    {
+      "original": "原版 n_embd=384, head_size=n_embd//n_head=64, block_size=256, dropout=0.2",
+      "teaching": "runtime 统一为 n_embd=32, block_size=8, dropout=0.1，本步显式传 head_size=8",
+      "reason": "让矩阵小到能整块打印，参数总数用眼睛就能验算。"
+    },
+    {
+      "original": "原版 Head 直接被 MultiHeadAttention 内部实例化",
+      "teaching": "本步单独实例化一个 Head 来体检",
+      "reason": "先看清单个零件，再看多头拼装。"
+    }
+  ],
+  "checkpoints": [
+    "named_parameters 只列出 key/query/value.weight",
+    "named_buffers 列出 tril 且形状为 (block_size, block_size)",
+    "参数总数 == 3×n_embd×head_size"
+  ],
+  "glossary": [
+    {
+      "term": "nn.Linear",
+      "explanation": "一个全连接层：y = x @ W.T (+ b)，这里 bias=False 所以没有 +b。"
+    },
+    {
+      "term": "register_buffer",
+      "explanation": "登记一块随模型保存/搬迁、但不参与梯度更新的固定张量。"
+    },
+    {
+      "term": "bias=False",
+      "explanation": "线性层不加常数偏移，参数表中不会出现 *.bias。"
+    }
+  ]
+}

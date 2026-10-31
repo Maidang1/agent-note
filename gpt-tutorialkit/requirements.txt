@@ -1,0 +1,5 @@
+# 本机执行后端所需（课程代码真实运行）。
+# 若解压到新机器：python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+# 然后 .venv/bin/python backend/runner_server.py（或直接 ./run.sh）
+torch>=2.2
+numpy>=1.26

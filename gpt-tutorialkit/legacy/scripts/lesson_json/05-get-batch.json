@@ -1,0 +1,151 @@
+{
+  "id": "05",
+  "order": 5,
+  "module": "数据与Bigram",
+  "title": "get_batch：随机剪小段，并把x右移一格当答案",
+  "sourceRefs": [
+    {
+      "file": "bigram.py",
+      "start": 37,
+      "end": 44,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/bigram.py#L37-L44"
+    },
+    {
+      "file": "gpt.py",
+      "start": 41,
+      "end": 48,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L41-L48"
+    }
+  ],
+  "goal": "看懂一个batch里B段×T个字符是怎么随机取出来的，以及y为什么是x整体右移一位。",
+  "prerequisites": [
+    "04"
+  ],
+  "explanation": [
+    "整本书111万字符不可能一次塞进模型。辅助工具load_original在内部已经写好了get_batch这个函数：每次随机抓B个起点，每个起点往后剪T个字符，凑成一小批。右侧不定义get_batch，只调用它，拿回输入xb和答案yb。B是并行几段，T是每段长度；本节默认B=4、T=8，很小方便看清。",
+    "yb是关键：它和xb形状完全一样都是(B,T)，但内容整体错开一格——第t个位置要预测的字符，正好是xb里第t+1个字符。所以yb[:, :-1]和xb[:, 1:]完全相等。右侧会打印第0行的x和y解码、逐位置\"输入→目标\"对照来亲眼确认这个移位关系。",
+    "多调几次get_batch会发现每批内容都不同，因为起点是随机抽的；传'train'用训练段、传'val'用验证段，两段形状相同。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 5,
+      "title": "让辅助工具准备好get_batch，取出本次批量大小",
+      "explanation": "第1行引入load_original，第2行选bigram得到ns这个收纳盒。第3行取出torch工具。第4行从ns取出本次的batch_size（记为B，并行几段）和block_size（记为T，每段多长），本节默认B=4、T=8。第5行打印这两个数字。注意get_batch这个函数本身也是辅助工具在内部写好放进ns的，右侧并没有重新定义它。"
+    },
+    {
+      "start": 6,
+      "end": 12,
+      "title": "调用get_batch抽一批训练数据，看x和y长什么样",
+      "explanation": "第6行调用ns['get_batch']('train')，它在函数内部随机抽B个起点、每个起点往后剪T个字符，堆成两张(B,T)张量：xb是输入，yb是答案。第7行打印两张张量的形状，应都是(4,8)。第8-9行打印第0行的原始整数列表，第10-11行把它们decode成文字。第12行做一个关键检查：yb去掉最后一列后是否等于xb去掉第一列后。这个等式成立，就说明y整体比x右移了一格。"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "title": "逐位置对照：每个输入字符要预测的下一个字符",
+      "explanation": "第13行for循环让t从0数到T-1。第14-15行在循环体内打印：位置t看到的字符（xb[0,t]）和它对应的目标字符（yb[0,t]）。你会发现yb[0,t]正好就是xb[0,t+1]——模型在每个位置做的事就是\"看当前字符，猜下一个字符\"。int()把单格整数取出来，decode([...])还原成一个字符。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "再抽一批看随机性，再抽一批验证集",
+      "explanation": "第16行再调一次get_batch('train')得到xb2，用下划线_表示我们不关心它的答案。第17行比较xb和xb2是否不同，起点是随机抽的，所以每次内容都不一样。第18行用'val'调一次，xv、yv来自验证段；第19行打印val批形状，和train批一样是(4,8)。"
+    },
+    {
+      "start": 20,
+      "end": 21,
+      "title": "让程序帮我们核对",
+      "explanation": "assert表示\"这一条必须成立\"。第20行检查xb形状等于(B,T)，第21行检查y右移一格的关系确实成立。通过时不另打印消息；不成立会报AssertionError。不要为通过检查而改assert。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "bigram.py",
+      "start": 37,
+      "end": 37,
+      "explanation": "定义get_batch(split)，split取train或val。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 39,
+      "end": 39,
+      "explanation": "按split选数据段：train用train_data，其余情况用val_data。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 40,
+      "end": 40,
+      "explanation": "randint在[0, len(data)-block_size)内随机抽B个起点编号，防止切片越界。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 41,
+      "end": 41,
+      "explanation": "按每个起点切data[i:i+block_size]，stack成输入x，形状(B,T)。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 42,
+      "end": 42,
+      "explanation": "切data[i+1:i+1+block_size]得到y：每一位的目标就是x里后一位字符。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 43,
+      "end": 43,
+      "explanation": "把x、y搬到device；CPU上无实际变化。"
+    },
+    {
+      "file": "bigram.py",
+      "start": 44,
+      "end": 44,
+      "explanation": "return x, y把一对(B,T)张量返回给调用者：x是输入序列，y是右移一位的目标序列。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 41,
+      "end": 48,
+      "explanation": "GPT的get_batch与bigram逐行相同。"
+    }
+  ],
+  "input": "可改load_original的overrides调B或T；多调几次get_batch观察随机性。",
+  "expected": "打印B/T、x和y的形状与第0行内容、逐位置\"输入→目标\"对照，以及y[:,:-1]==x[:,1:]成立；val批形状与train相同。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\nB, T = ns['batch_size'], ns['block_size']\nprint('本次 B =', B, ' T =', T)\nxb, yb = ns['get_batch']('train')\nprint('xb 形状:', tuple(xb.shape), ' yb 形状:', tuple(yb.shape))\nprint('第0行 x =', xb[0].tolist())\nprint('第0行 y =', yb[0].tolist())\nprint('第0行 x 解码:', repr(ns['decode'](xb[0].tolist())))\nprint('第0行 y 解码:', repr(ns['decode'](yb[0].tolist())))\nprint('移位检查 yb[:, :-1] == xb[:, 1:]:', bool(torch.equal(yb[:, :-1], xb[:, 1:])))\nfor t in range(T):\n    print(' 位置%d 输入=%r 目标(下一个字符)=%r' % (\n        t, ns['decode']([int(xb[0, t])]), ns['decode']([int(yb[0, t])])))\nxb2, _ = ns['get_batch']('train')\nprint('再抽一批，和上一批不同:', not bool(torch.equal(xb, xb2)))\nxv, yv = ns['get_batch']('val')\nprint('val 批形状:', tuple(xv.shape))\nassert tuple(xb.shape) == (B, T)\nassert torch.equal(yb[:, :-1], xb[:, 1:])\n",
+  "exercise": {
+    "instruction": "把overrides里block_size改成5，再运行，确认x形状第二维变成5，移位关系依然成立。",
+    "hint": "改的是load_original的overrides，assert用的是实时ns值。",
+    "solution": "overrides={'block_size':5}，xb形状(4,5)，yb[:,:-1]==xb[:,1:]仍为True。"
+  },
+  "debug": {
+    "instruction": "重新实现get_batch时忘了y要+1移位，制造\"答案没错开\"的不变量错误。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('bigram')\ntorch = ns['torch']\ndata = ns['train_data']\nB, T = ns['batch_size'], ns['block_size']\nix = torch.randint(len(data) - T, (B,))\nx = torch.stack([data[i:i+T] for i in ix])\ny = torch.stack([data[i:i+T] for i in ix])   # 故意漏了 +1\nprint('正确关系应是 y[:, :-1] == x[:, 1:]')\nassert torch.equal(y[:, :-1], x[:, 1:])\n",
+    "expectedError": "AssertionError",
+    "fix": "y的切片要从i+1开始：data[i+1:i+1+block_size]，让每个位置的目标等于后一个字符。"
+  },
+  "modifications": [
+    {
+      "original": "原版B=32,T=8",
+      "teaching": "运行时统一覆盖B=4,T=8便于打印整行",
+      "reason": "小批量下能看清x/y逐位对照，模型逻辑不变。"
+    }
+  ],
+  "checkpoints": [
+    "x与y形状都是(B,T)",
+    "y[:,:-1]==x[:,1:]移位断言通过",
+    "两次随机批内容不同"
+  ],
+  "glossary": [
+    {
+      "term": "batch (B)",
+      "explanation": "一次并行处理的小段数量。"
+    },
+    {
+      "term": "block_size / 上下文长度 (T)",
+      "explanation": "每段最多看几个字符。"
+    },
+    {
+      "term": "stack",
+      "explanation": "把多个一维张量沿新维度堆成二维张量。"
+    }
+  ]
+}

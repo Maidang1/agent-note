@@ -1,0 +1,133 @@
+{
+  "id": "25",
+  "order": 25,
+  "module": "GPT前向传播",
+  "title": "forward 起步：把字符向量和位置向量加在一起",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 160,
+      "end": 166,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L160-L166"
+    }
+  ],
+  "goal": "看懂 forward 开头如何把 idx 变成 tok_emb、pos_emb，并理解广播相加得到 (B,T,n_embd)。",
+  "prerequisites": [
+    "24"
+  ],
+  "explanation": [
+    "从这节起进入 forward：模型被加括号调用时真正跑的那段计算。它的第一步是把输入的整数编号变成模型能算的特征向量。流程是：准备一个 (B,T) 的编号表 → 按字符查表得到字符向量 → 按位置编号查表得到位置向量 → 把两者逐位相加。",
+    "B 是一批里有几段文字、T 是每段几个字符。字符向量 tok_emb 形状是 (B,T,32)：每个字符编号去 token 表取出一行 32 维向量。但同一个字符出现在句子开头和中间应当区别对待，所以还要加位置向量——pos_emb 形状只有 (T,32)，每行对应一个位置 0 到 T-1。",
+    "相加那步用了广播：(B,T,32) 加 (T,32)，PyTorch 自动把位置向量复制到 B 段上，结果仍是 (B,T,32)，意思是每个字符的向量 = 字符本身向量 + 它站的位置向量。右侧把这三步的形状逐个打印，并用 allclose 核对 x 确实等于两者之和。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备模型并搬到设备",
+      "explanation": "第1行引入工具，第2行选 gpt 得 ns，第3行取出 torch，第4行造出 model 并用 .to(ns['device']) 把权重放到本次设备（本机是 cpu）。后面取数据也要指定同一个设备，否则模型和数字表不在一处会报错。"
+    },
+    {
+      "start": 5,
+      "end": 7,
+      "title": "造一张随机的编号输入",
+      "explanation": "第5行设 B=2、T=block_size=8；第6行用 randint 在 0 到 64（vocab_size=65）之间随机取数，造出 (2,8) 的整数表 idx；第7行打印它的形状 (2,8)。这是假的“文字编号”，只为演示前向形状。"
+    },
+    {
+      "start": 8,
+      "end": 8,
+      "title": "字符编号查表",
+      "explanation": "第8行 model.token_embedding_table(idx) 对每个编号取出一行 32 维向量，得到 tok_emb，形状 (2,8,32)。查表这个动作发生在模型内部，右侧只是调用它，并没有展开表里面有多少行数字。"
+    },
+    {
+      "start": 9,
+      "end": 9,
+      "title": "位置编号查表",
+      "explanation": "第9行 torch.arange(T) 生成 [0,1,...,7] 这 8 个位置编号，再查 position_embedding_table 得到 pos_emb，形状 (8,32)。注意它只有 T 行、没有 B 那一维；而且这张表最多只能查到 block_size=8 个位置。"
+    },
+    {
+      "start": 10,
+      "end": 10,
+      "title": "广播相加",
+      "explanation": "第10行 x = tok_emb + pos_emb。(2,8,32) 加 (8,32) 时，PyTorch 把位置向量在批维上自动复制 2 份，结果 x 仍是 (2,8,32)。这一步就把“是哪个字符”和“在第几位”两件信息合到了一起。"
+    },
+    {
+      "start": 11,
+      "end": 14,
+      "title": "打印形状并核对",
+      "explanation": "第11到13行依次打印 tok_emb (2,8,32)、pos_emb (8,32)、x (2,8,32)；第14行用 allclose 验证 x 逐元素确实等于 tok_emb+pos_emb，应输出 True。"
+    },
+    {
+      "start": 15,
+      "end": 17,
+      "title": "三条形状断言",
+      "explanation": "第15行要求 tok_emb 是 (B,T,n_embd)、第16行 pos_emb 是 (T,n_embd)、第17行 x 是 (B,T,n_embd)。n_embd 实时读 ns，你改 overrides 后这些形状会跟着变；改 T 为 4 时 pos_emb 会变成 (4,32)。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 160,
+      "end": 161,
+      "explanation": "forward 接收 idx（可带可选 targets）；B,T 从输入形状读出。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 164,
+      "end": 164,
+      "explanation": "字符编号查表成 tok_emb，形状 (B,T,n_embd)。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 165,
+      "end": 165,
+      "explanation": "torch.arange(T) 生成位置编号，查位置表得 pos_emb，形状 (T,n_embd)；device 与模型一致。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 166,
+      "end": 166,
+      "explanation": "广播相加：(B,T,n_embd)+(T,n_embd)→(B,T,n_embd)，把位置信息加到每个字符上。"
+    }
+  ],
+  "input": "改 B（段数）或 T（每段长度，不要超过 block_size），观察形状如何随之变化。",
+  "expected": "依次打印 idx、tok_emb、pos_emb、x 的形状；x 的最后一维恒为 n_embd，且等于 tok_emb+pos_emb 的逐元素和。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nB, T = 2, ns['block_size']\nidx = torch.randint(ns['vocab_size'], (B, T), device=ns['device'])\nprint('idx (B,T):', tuple(idx.shape))\ntok_emb = model.token_embedding_table(idx)\npos_emb = model.position_embedding_table(torch.arange(T, device=ns['device']))\nx = tok_emb + pos_emb\nprint('tok_emb:', tuple(tok_emb.shape))\nprint('pos_emb:', tuple(pos_emb.shape))\nprint('x = tok_emb + pos_emb:', tuple(x.shape))\nprint('逐元素和校验:', bool(torch.allclose(x, tok_emb + pos_emb)))\nassert tok_emb.shape == (B, T, ns['n_embd'])\nassert pos_emb.shape == (T, ns['n_embd'])\nassert x.shape == (B, T, ns['n_embd'])\n",
+  "exercise": {
+    "instruction": "把 T 改成 4（小于 block_size=8），重新运行，确认 pos_emb 形状变成 (4, n_embd) 而不是 (8, n_embd)。",
+    "hint": "torch.arange(T) 用的是实际 T，不是 block_size。",
+    "solution": "pos_emb=(4,n_embd)，广播仍成立；block_size 只是位置表的最大容量。"
+  },
+  "debug": {
+    "instruction": "故意查超过 block_size 的位置，观察位置表越界。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nmodel = ns['GPTLanguageModel']().to(ns['device'])\nprint('block_size=', ns['block_size'], '故意查 block_size+10 个位置')\nlong_t = ns['block_size'] + 10\nmodel.position_embedding_table(torch.arange(long_t, device=ns['device']))\n",
+    "expectedError": "IndexError",
+    "fix": "位置表只有 block_size 行，所以生成时必须把上下文裁到最后 block_size 个 token（第28课会讲）。"
+  },
+  "modifications": [
+    {
+      "original": "block_size=256",
+      "teaching": "block_size=8（runtime 覆盖）",
+      "reason": "小上下文也能演示查表与广播，速度快。"
+    }
+  ],
+  "checkpoints": [
+    "tok_emb 形状为 (B,T,n_embd)",
+    "pos_emb 形状为 (T,n_embd)",
+    "广播相加结果形状正确"
+  ],
+  "glossary": [
+    {
+      "term": "广播 broadcast",
+      "explanation": "PyTorch 自动把较小张量按维度复制匹配，完成不同形状的相加。"
+    },
+    {
+      "term": "torch.arange(T)",
+      "explanation": "生成 [0,1,...,T-1] 的一维整数张量，表示位置编号。"
+    },
+    {
+      "term": "位置编码",
+      "explanation": "告诉模型每个 token 处在序列哪个位置的可训练向量。"
+    }
+  ]
+}

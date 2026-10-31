@@ -1,0 +1,121 @@
+{
+  "id": "22",
+  "order": 22,
+  "module": "手写GPT自注意力",
+  "title": "Block forward：预归一化 + 两次残差连接",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 133,
+      "end": 136,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L133-L136"
+    }
+  ],
+  "goal": "看懂 x = x + sa(ln1(x)) 和 x = x + ffwd(ln2(x)) 这两步，并用张量范数对比残差到底加了多少。",
+  "prerequisites": [
+    "21"
+  ],
+  "explanation": [
+    "Block 的 forward 只有两行，但非常关键：x = x + sa(ln1(x))，然后 x = x + ffwd(ln2(x))。注意顺序——先做 LayerNorm，再喂给注意力/前馈，这叫“预归一化 pre-norm”。加号就是残差连接：把原来的 x 原封不动加回去，让子模块只需要学“应该在 x 上改动多少”。",
+    "整体流程：把这两行手动拆成四个中间变量 → 先算 sa_out = sa(ln1(x))，得 after_attn = x + sa_out；再算 ff_out = ffwd(ln2(after_attn))，得 out = after_attn + ff_out → 和 blk(x) 对拍。",
+    "你会看到输出形状和输入相同；手动两步残差与 blk(x) allclose；两个残差 delta 的范数比值远小于 1——说明残差只在原信号上做小幅调整，而不是取而代之。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 3,
+      "title": "准备辅助工具",
+      "explanation": "第1–2行取出 load_original 和 ns。第3行取出 torch。"
+    },
+    {
+      "start": 5,
+      "end": 9,
+      "title": "建 Block 并造输入",
+      "explanation": "第5行固定种子。第6行实例化 Block。第7行切到 eval 关掉 dropout，让结果可复现。第8–9行造 (2,5,32) 的随机输入 x。"
+    },
+    {
+      "start": 11,
+      "end": 14,
+      "title": "手动拆出两步预归一化+残差",
+      "explanation": "第11行 sa_out = blk.sa(blk.ln1(x))：先 ln1 归一化、再多头注意力。第12行 after_attn = x + sa_out：把原 x 加回去（第一次残差）。第13行 ff_out = blk.ffwd(blk.ln2(after_attn))：对已经加过注意力的结果再做一次归一化+前馈。第14行 out = after_attn + ff_out：第二次残差。"
+    },
+    {
+      "start": 16,
+      "end": 16,
+      "title": "直接跑 blk(x) 拿模型输出",
+      "explanation": "第16行 out_model = blk(x) 直接调用 Block.forward，它内部就是上面两行紧凑写法。"
+    },
+    {
+      "start": 17,
+      "end": 21,
+      "title": "打印形状、对拍和范数比",
+      "explanation": "第17–18行打印输入输出形状，应相同。第19行用 allclose 核对手动 out 和模型 out_model。第20–21行分别打印 sa_out、ff_out 的范数除以 x 的范数——这两个比值远小于 1，说明残差只是小幅调整。"
+    },
+    {
+      "start": 22,
+      "end": 24,
+      "title": "assert 自检",
+      "explanation": "第22行核对形状不变，第23行硬核对手动与模型输出一致，第24行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 133,
+      "end": 134,
+      "explanation": "x = x + self.sa(self.ln1(x))：先 ln1 归一化，再过多头注意力，最后把结果加回 x。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 135,
+      "end": 135,
+      "explanation": "x = x + self.ffwd(self.ln2(x))：第二次预归一化+前馈+残差。"
+    },
+    {
+      "file": "gpt.py",
+      "start": 136,
+      "end": 136,
+      "explanation": "return x：Block 输出与输入同形状。"
+    }
+  ],
+  "input": "改 x 的形状或随机种子，观察残差范数比值是否稳定在一个小数量级。",
+  "expected": "输出形状与输入相同；手动两步残差与 blk(x) allclose；两个 delta 范数比值明显小于 1。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\n\ntorch.manual_seed(0)\nblk = ns['Block'](ns['n_embd'], ns['n_head'])\nblk.eval()\nB, T, C = 2, 5, ns['n_embd']\nx = torch.randn(B, T, C)\n\nsa_out = blk.sa(blk.ln1(x))\nafter_attn = x + sa_out\nff_out = blk.ffwd(blk.ln2(after_attn))\nout = after_attn + ff_out\n\nout_model = blk(x)\nprint('输入形状 =', tuple(x.shape), ' 输出形状 =', tuple(out_model.shape))\nprint('形状不变? ', out_model.shape == x.shape)\nprint('和手动两步残差是否一致: ', torch.allclose(out_model, out, atol=1e-6))\nprint('注意力残差 delta 范数 / 输入范数 =', round((sa_out.norm()/x.norm()).item(), 4))\nprint('前馈残差 delta 范数 / 输入范数 =', round((ff_out.norm()/x.norm()).item(), 4))\nassert out_model.shape == x.shape\nassert torch.allclose(out_model, out, atol=1e-6)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把 pre-norm 改成 post-norm：x = ln1(x + sa(x))，再和原版 blk(x) 对比，看是否还能 allclose。",
+    "hint": "post-norm 先加残差再归一化，顺序变了，数值自然不同。",
+    "solution": "(postnorm_out - blk(x)).abs().max() 明显大于 1e-6；两种归一化顺序都是合法设计，但本仓库用 pre-norm。"
+  },
+  "debug": {
+    "instruction": "故意省略残差加号，只算 sa(ln1(x))，看和 Block 真实输出差多少。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\ntorch.manual_seed(0)\nblk = ns['Block'](ns['n_embd'], ns['n_head']); blk.eval()\nx = torch.randn(2, 5, ns['n_embd'])\nout_no_residual = blk.sa(blk.ln1(x))   # 错误：忘了 +x 残差\nprint('没加残差时与 Block 真实输出最大差 =', (out_no_residual - blk(x)).abs().max().item())\nassert torch.allclose(out_no_residual, blk(x), atol=1e-5)\n",
+    "expectedError": "AssertionError（allclose 失败，差约 2.9）",
+    "fix": "残差是 x + sa(...)，不是 sa(...)；加号保证信息通路畅通。"
+  },
+  "modifications": [
+    {
+      "original": "原版 forward 两行紧凑写法",
+      "teaching": "本步拆成 4 行中间变量并打印范数比",
+      "reason": "让“预归一化+残差”的数据流可视化。"
+    }
+  ],
+  "checkpoints": [
+    "输出形状 == 输入形状",
+    "手动两步与 blk(x) allclose",
+    "残差 delta 范数远小于输入范数"
+  ],
+  "glossary": [
+    {
+      "term": "残差连接 residual",
+      "explanation": "y = x + F(x)：让子模块只学相对于输入的改动量。"
+    },
+    {
+      "term": "预归一化 pre-norm",
+      "explanation": "先 LayerNorm 再进入子模块；post-norm 则相反。"
+    },
+    {
+      "term": "范数 norm",
+      "explanation": "向量整体长度的度量；Frobenius 范数即所有元素平方和开根号。"
+    }
+  ]
+}

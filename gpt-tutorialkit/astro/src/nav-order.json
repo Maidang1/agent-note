@@ -1,0 +1,480 @@
+{
+  "modules": [
+    {
+      "id": "m1-data",
+      "title": "把文字变成训练数据",
+      "milestone": "你写的 get_batch 和原版逐元素相同"
+    },
+    {
+      "id": "m2-bigram",
+      "title": "Bigram：最简单的语言模型",
+      "milestone": "一个会胡乱续写的模型"
+    },
+    {
+      "id": "m3-train",
+      "title": "训练循环",
+      "milestone": "看着 loss 往下掉，生成开始像英文"
+    },
+    {
+      "id": "m4-attention",
+      "title": "自注意力与 Transformer Block",
+      "milestone": "亲手拼出一个 Block"
+    },
+    {
+      "id": "m5-gpt",
+      "title": "组装 GPT",
+      "milestone": "完整的 GPTLanguageModel"
+    },
+    {
+      "id": "m6-train-gpt",
+      "title": "训练你的 GPT",
+      "milestone": "在本机 CPU 上训练并生成"
+    },
+    {
+      "id": "m7-final",
+      "title": "结业：闭卷复现 gpt.py",
+      "milestone": "从骨架写出整份 gpt.py"
+    }
+  ],
+  "lessons": [
+    {
+      "order": 1,
+      "id": "01-setup",
+      "slug": "m1-data/01-setup",
+      "title": "实验开关：超参数、设备与随机种子",
+      "goal": "看懂 gpt.py 开头的超参数各管什么，知道本课为什么把它们调小。",
+      "module": "m1-data",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 1,
+          "end": 19
+        }
+      ]
+    },
+    {
+      "order": 2,
+      "id": "02-vocab",
+      "slug": "m1-data/02-vocab",
+      "title": "字符表：模型能「说」哪些字",
+      "goal": "从原文里收集所有不同的字符，得到 vocab_size。",
+      "module": "m1-data",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 21,
+          "end": 27
+        }
+      ]
+    },
+    {
+      "order": 3,
+      "id": "03-encode-decode",
+      "slug": "m1-data/03-encode-decode",
+      "title": "encode / decode：字符和整数互相翻译",
+      "goal": "写出 stoi、itos、encode、decode，让文字能在字符和整数之间来回转换。",
+      "module": "m1-data",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 28,
+          "end": 32
+        }
+      ]
+    },
+    {
+      "order": 4,
+      "id": "04-train-val",
+      "slug": "m1-data/04-train-val",
+      "title": "张量与训练 / 验证切分",
+      "goal": "把整本书变成一个整数张量，并切出训练集和验证集。",
+      "module": "m1-data",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 34,
+          "end": 38
+        }
+      ]
+    },
+    {
+      "order": 5,
+      "id": "05-get-batch",
+      "slug": "m1-data/05-get-batch",
+      "title": "get_batch：随机剪一批「题目 + 答案」",
+      "goal": "写出 get_batch，并说清为什么答案 y 就是 x 右移一格。",
+      "module": "m1-data",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 40,
+          "end": 48
+        }
+      ]
+    },
+    {
+      "order": 6,
+      "id": "06-bigram-table",
+      "slug": "m2-bigram/06-bigram-table",
+      "title": "Bigram 模型：一张 65 × 65 的打分表",
+      "goal": "用 nn.Embedding 建出 Bigram 模型唯一的一张参数表。",
+      "module": "m2-bigram",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 60,
+          "end": 66
+        }
+      ]
+    },
+    {
+      "order": 7,
+      "id": "07-bigram-logits",
+      "slug": "m2-bigram/07-bigram-logits",
+      "title": "forward：一次查表得到所有位置的 logits",
+      "goal": "写出 Bigram 的 forward，看懂 (B, T) 怎么变成 (B, T, C)。",
+      "module": "m2-bigram",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 68,
+          "end": 71
+        }
+      ]
+    },
+    {
+      "order": 8,
+      "id": "08-cross-entropy",
+      "slug": "m2-bigram/08-cross-entropy",
+      "title": "交叉熵：给「猜得有多差」打一个分",
+      "goal": "写出 forward 的 loss 分支，并手算一遍交叉熵，确认它就是「正确答案概率的 -log」。",
+      "module": "m2-bigram",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 73,
+          "end": 81
+        }
+      ]
+    },
+    {
+      "order": 9,
+      "id": "09-generate",
+      "slug": "m2-bigram/09-generate",
+      "title": "generate：一个字符一个字符往外写",
+      "goal": "写出自回归生成循环：预测 → 取最后一位 → softmax → 抽样 → 接上。",
+      "module": "m2-bigram",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 83,
+          "end": 96
+        }
+      ]
+    },
+    {
+      "order": 10,
+      "id": "10-train-step",
+      "slug": "m3-train/10-train-step",
+      "title": "训练一步：前向、清梯度、反向、更新",
+      "goal": "写出训练一步的四行代码，并亲眼看到参数被更新、loss 下降。",
+      "module": "m3-train",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 101,
+          "end": 102
+        },
+        {
+          "file": "bigram.py",
+          "start": 114,
+          "end": 118
+        }
+      ]
+    },
+    {
+      "order": 11,
+      "id": "11-estimate-loss",
+      "slug": "m3-train/11-estimate-loss",
+      "title": "estimate_loss：用平均分看模型的真实水平",
+      "goal": "写出 estimate_loss，理解 no_grad、eval/train 模式，以及为什么要在多批上取平均。",
+      "module": "m3-train",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 46,
+          "end": 58
+        },
+        {
+          "file": "gpt.py",
+          "start": 50,
+          "end": 62
+        }
+      ]
+    },
+    {
+      "order": 12,
+      "id": "12-train-loop",
+      "slug": "m3-train/12-train-loop",
+      "title": "完整训练循环：看着 loss 往下掉",
+      "goal": "把取数据、训练一步、定期评估拼成完整的训练循环，训完再生成一段文字。",
+      "module": "m3-train",
+      "refs": [
+        {
+          "file": "bigram.py",
+          "start": 98,
+          "end": 122
+        }
+      ]
+    },
+    {
+      "order": 13,
+      "id": "13-prefix-average",
+      "slug": "m4-attention/13-prefix-average",
+      "title": "注意力之前的数学技巧：前缀平均的三种写法",
+      "goal": "用下三角矩阵乘法实现「每个位置汇总自己和之前的信息」，这就是自注意力的骨架。",
+      "module": "m4-attention",
+      "refs": []
+    },
+    {
+      "order": 14,
+      "id": "14-head-init",
+      "slug": "m4-attention/14-head-init",
+      "title": "Head 的零件：query、key、value 和一个下三角",
+      "goal": "建出一个注意力头需要的所有部件，理解 q / k / v 各自的角色。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 64,
+          "end": 74
+        }
+      ]
+    },
+    {
+      "order": 15,
+      "id": "15-attention-scores",
+      "slug": "m4-attention/15-attention-scores",
+      "title": "注意力打分：q · kᵀ，再除以 √head_size",
+      "goal": "用一次矩阵乘法算出所有位置两两之间的打分，并理解缩放为什么必要。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 76,
+          "end": 83
+        }
+      ]
+    },
+    {
+      "order": 16,
+      "id": "16-causal-mask",
+      "slug": "m4-attention/16-causal-mask",
+      "title": "因果掩码：未来的字符必须看不见",
+      "goal": "用 masked_fill 把未来位置的打分变成 -inf，再 softmax 成权重。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 84,
+          "end": 85
+        }
+      ]
+    },
+    {
+      "order": 17,
+      "id": "17-weighted-values",
+      "slug": "m4-attention/17-weighted-values",
+      "title": "按权重汇总 value：一个 Head 的完整输出",
+      "goal": "写完 Head.forward 的最后三行，理解 dropout 在训练和评估时的区别。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 86,
+          "end": 90
+        }
+      ]
+    },
+    {
+      "order": 18,
+      "id": "18-multi-head",
+      "slug": "m4-attention/18-multi-head",
+      "title": "多头注意力：几个头并联，拼起来再投影",
+      "goal": "把多个 Head 并联成 MultiHeadAttention，理解为什么要「多头」。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 92,
+          "end": 104
+        }
+      ]
+    },
+    {
+      "order": 19,
+      "id": "19-feed-forward",
+      "slug": "m4-attention/19-feed-forward",
+      "title": "前馈层：每个位置自己消化一下",
+      "goal": "写出 FeedFoward：先扩宽 4 倍，过非线性，再压回来。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 106,
+          "end": 119
+        }
+      ]
+    },
+    {
+      "order": 20,
+      "id": "20-block",
+      "slug": "m4-attention/20-block",
+      "title": "Block：LayerNorm + 注意力 + 前馈 + 残差",
+      "goal": "把注意力和前馈装进一个 Block，用残差连接和预归一化让深层网络能训练。",
+      "module": "m4-attention",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 121,
+          "end": 136
+        }
+      ]
+    },
+    {
+      "order": 21,
+      "id": "21-gpt-init",
+      "slug": "m5-gpt/21-gpt-init",
+      "title": "GPT 的骨架：嵌入、Block 堆叠、输出头",
+      "goal": "建出 GPTLanguageModel 的五个部件，看清参数都花在哪里。",
+      "module": "m5-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 138,
+          "end": 150
+        }
+      ]
+    },
+    {
+      "order": 22,
+      "id": "22-init-weights",
+      "slug": "m5-gpt/22-init-weights",
+      "title": "_init_weights：开训前把权重放在好位置",
+      "goal": "写出 GPT 的初始化规则，并实测它对初始 loss 的影响。",
+      "module": "m5-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 152,
+          "end": 158
+        }
+      ]
+    },
+    {
+      "order": 23,
+      "id": "23-embeddings",
+      "slug": "m5-gpt/23-embeddings",
+      "title": "forward 第一步：字符向量 + 位置向量",
+      "goal": "把 (B, T) 的编号变成 (B, T, C) 的向量，并理解加法里的广播。",
+      "module": "m5-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 160,
+          "end": 166
+        }
+      ]
+    },
+    {
+      "order": 24,
+      "id": "24-gpt-logits",
+      "slug": "m5-gpt/24-gpt-logits",
+      "title": "forward 后半段：穿过 Block，变成打分和 loss",
+      "goal": "写完 GPT 的 forward，让它和 Bigram 有完全相同的「接口」。",
+      "module": "m5-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 167,
+          "end": 179
+        }
+      ]
+    },
+    {
+      "order": 25,
+      "id": "25-gpt-generate",
+      "slug": "m5-gpt/25-gpt-generate",
+      "title": "generate：上文太长就截掉前面",
+      "goal": "在 Bigram 的生成循环上加一行裁剪，让 GPT 能写任意长的文字。",
+      "module": "m5-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 181,
+          "end": 196
+        }
+      ]
+    },
+    {
+      "order": 26,
+      "id": "26-params-optimizer",
+      "slug": "m6-train-gpt/26-params-optimizer",
+      "title": "训练前的准备：搬到设备、数参数、建优化器",
+      "goal": "走完原版训练前的三行代码，并弄清 GPT 的参数都花在了哪里。",
+      "module": "m6-train-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 198,
+          "end": 204
+        }
+      ]
+    },
+    {
+      "order": 27,
+      "id": "27-train-gpt",
+      "slug": "m6-train-gpt/27-train-gpt",
+      "title": "训练你的 GPT",
+      "goal": "重写一遍训练循环，在本机 CPU 上把 GPT 训到明显超过 Bigram。",
+      "module": "m6-train-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 206,
+          "end": 220
+        }
+      ]
+    },
+    {
+      "order": 28,
+      "id": "28-sample-save",
+      "slug": "m6-train-gpt/28-sample-save",
+      "title": "用训好的模型写作，并把它存下来",
+      "goal": "写一个从任意开头续写的 sample 函数，并用 state_dict 存档、读档。",
+      "module": "m6-train-gpt",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 222,
+          "end": 225
+        }
+      ]
+    },
+    {
+      "order": 29,
+      "id": "29-capstone",
+      "slug": "m7-final/29-capstone",
+      "title": "结业：闭卷写出 gpt.py",
+      "goal": "只看一个空骨架，从头写出完整的 gpt.py，并训练到超过 Bigram。",
+      "module": "m7-final",
+      "refs": [
+        {
+          "file": "gpt.py",
+          "start": 1,
+          "end": 225
+        }
+      ]
+    }
+  ]
+}

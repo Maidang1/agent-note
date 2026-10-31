@@ -1,0 +1,120 @@
+{
+  "id": "15",
+  "order": 15,
+  "module": "手写GPT自注意力",
+  "title": "为什么要乘 head_size 的 -0.5 次方：稳住 softmax",
+  "sourceRefs": [
+    {
+      "file": "gpt.py",
+      "start": 83,
+      "end": 83,
+      "url": "https://github.com/karpathy/ng-video-lecture/blob/52201428ed7b46804849dea0b3ccf0de9df1a5c3/gpt.py#L83-L83"
+    }
+  ],
+  "goal": "理解 q·k 点积后为什么要除以 sqrt(head_size)，并对比缩放前后 softmax 输出有多尖锐。",
+  "prerequisites": [
+    "14"
+  ],
+  "explanation": [
+    "上一节算出的 wei_raw 是两个 head_size 维向量对应位相乘再求和的结果。维度越多，这个和的波动越大；直接送进 softmax 会让它像放大镜——把一个稍高的位置概率撑到 0.99，其余压成 0。这一节在 wei_raw 上乘一个 1/sqrt(head_size) 的因子，把波动压回稳定范围。",
+    "整体流程：复现上一节的 wei_raw → 算 scale = head_size**-0.5 → 得到缩放后的 wei → 分别对 raw 和 scaled 做 softmax → 对比最大概率和熵。熵越高说明概率分布越平，模型还愿意参考多个位置；熵越低说明它已经偏执到只看一个位置。",
+    "你会看到 raw 的 std 大约是 scaled 的 sqrt(head_size) 倍；scaled 的最大概率明显更小、熵更大。缩放不改变形状，只改变 softmax 的尖锐程度。"
+  ],
+  "walkthrough": [
+    {
+      "start": 1,
+      "end": 4,
+      "title": "准备辅助工具（含 F）",
+      "explanation": "第1–3行取出 load_original、ns、torch。第4行从 ns 里取出 F，它是 torch.nn.functional 的别名，后面要用 F.softmax。"
+    },
+    {
+      "start": 6,
+      "end": 11,
+      "title": "建 Head 并投影 k/q",
+      "explanation": "第6行固定随机种子。第7–8行建 head_size=8 的 Head。第9–10行造 (2,5,32) 的随机输入 x。第11行一次调用两个 Linear，得到 k 和 q。"
+    },
+    {
+      "start": 13,
+      "end": 15,
+      "title": "算 raw 分数、缩放因子和 scaled 分数",
+      "explanation": "第13行复现上一节的亲密度矩阵乘，得到 wei_raw。第14行 scale = head_size**-0.5，也就是 1/sqrt(8)≈0.354。第15行把 wei_raw 整体乘上 scale 得到 wei。"
+    },
+    {
+      "start": 16,
+      "end": 19,
+      "title": "对比 raw 和 scaled 的离散程度",
+      "explanation": "第16–17行打印 head_size 和 scale。第18–19行分别打印两份分数的最小值、最大值、标准差。std 衡量数字整体有多分散；缩放后 std 大约变成原来的 1/sqrt(8)。"
+    },
+    {
+      "start": 21,
+      "end": 22,
+      "title": "分别对两份分数做 softmax",
+      "explanation": "第21–22行沿最后一维做 softmax，把任意实数变成和为 1 的概率分布。p_raw 用未缩放分数，p_scaled 用缩放后分数。"
+    },
+    {
+      "start": 23,
+      "end": 28,
+      "title": "对比最大概率和平均熵",
+      "explanation": "第23–24行打印两份 softmax 的最大概率——越大越像“只信一个位置”。第25–26行用 -Σp·log p 算熵，第27–28行打印平均熵——越大越平。你会看到 scaled 的最大概率更小、熵更大。"
+    },
+    {
+      "start": 29,
+      "end": 30,
+      "title": "assert 自检",
+      "explanation": "第29行用 allclose 核对 wei == wei_raw*scale，第30行打印 OK。"
+    }
+  ],
+  "statements": [
+    {
+      "file": "gpt.py",
+      "start": 83,
+      "end": 83,
+      "explanation": "wei = q @ k.transpose(-2,-1) * k.shape[-1]**-0.5：先做亲密度矩阵乘，再乘 1/sqrt(head_size)。"
+    }
+  ],
+  "input": "把 head_size 改大（例如 16），观察 raw 分数的 std 是否随维度变大，缩放后 std 是否回到接近 1。",
+  "expected": "打印 raw/scaled 的 min/max/std、softmax 最大概率和熵；scaled 的 std 约为 raw 的 1/sqrt(head_size)，scaled 的最大概率明显更小、熵更大。",
+  "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\ntorch = ns['torch']\nF = ns['F']\n\ntorch.manual_seed(0)\nhead_size = 8\nh = ns['Head'](head_size)\nB, T, C = 2, 5, ns['n_embd']\nx = torch.randn(B, T, C)\nk = h.key(x); q = h.query(x)\n\nwei_raw = q @ k.transpose(-2, -1)\nscale = k.shape[-1] ** -0.5\nwei = wei_raw * scale\nprint('head_size = k.shape[-1] =', k.shape[-1])\nprint('缩放因子 **-0.5 =', scale, '  即 1/sqrt(head_size)')\nprint('raw   分数 min=%.3f max=%.3f std=%.3f' % (wei_raw.min().item(), wei_raw.max().item(), wei_raw.std().item()))\nprint('scaled 分数 min=%.3f max=%.3f std=%.3f' % (wei.min().item(), wei.max().item(), wei.std().item()))\n\np_raw = F.softmax(wei_raw, dim=-1)\np_scaled = F.softmax(wei, dim=-1)\nprint('raw   softmax 后最大概率 =', round(p_raw.max().item(), 4))\nprint('scaled softmax 后最大概率 =', round(p_scaled.max().item(), 4))\nent_raw = -(p_raw*torch.log(p_raw+1e-9)).sum(-1).mean().item()\nent_scaled = -(p_scaled*torch.log(p_scaled+1e-9)).sum(-1).mean().item()\nprint('raw   softmax 平均熵(越高越平) =', round(ent_raw, 4))\nprint('scaled softmax 平均熵 =', round(ent_scaled, 4))\nassert torch.allclose(wei, wei_raw * scale)\nprint('OK')\n",
+  "exercise": {
+    "instruction": "把缩放因子改成 1.0（不缩放）和 1/head_size（除过头），分别观察 softmax 最大概率怎么变。",
+    "hint": "不缩放会更尖锐；除过头会把分数压得太扁，softmax 接近均匀分布。",
+    "solution": "1.0 时 max 概率 >0.7；1/head_size 时 max 概率接近 1/T（均匀），信息被浪费。"
+  },
+  "debug": {
+    "instruction": "把 * k.shape[-1]**-0.5 错写成 * k.shape[-1]，观察 softmax 被推到几乎 one-hot。",
+    "code": "from tutorial_runtime import load_original\nns = load_original('gpt')\nimport torch\nfrom torch.nn import functional as F\ntorch.manual_seed(0)\nh = ns['Head'](8)\nx = torch.randn(2, 5, ns['n_embd'])\nk = h.key(x); q = h.query(x)\nwei = q @ k.transpose(-2,-1) * k.shape[-1]   # 错误：忘了 **-0.5，反而乘了 head_size\np = F.softmax(wei, dim=-1)\nprint('错误缩放后 softmax 最大概率 =', p.max().item())\nassert p.max().item() < 0.9, 'softmax 过度尖锐，几乎只看一个位置'\n",
+    "expectedError": "AssertionError: softmax 过度尖锐，几乎只看一个位置",
+    "fix": "把乘法改回 * k.shape[-1]**-0.5，即除以 sqrt(head_size)，而不是乘以 head_size。"
+  },
+  "modifications": [
+    {
+      "original": "旧教程视频里用 C（n_embd）做缩放分母",
+      "teaching": "本仓库源码用 k.shape[-1]（当前 head 的 head_size）",
+      "reason": "多头时每个头维度更小，必须按自己的 head_size 缩放才对。"
+    },
+    {
+      "original": "原版没有对比缩放前后 softmax",
+      "teaching": "本步并排打印 raw 与 scaled 的最大概率和熵",
+      "reason": "用数字直观感受缩放的作用，而不是只记公式。"
+    }
+  ],
+  "checkpoints": [
+    "scale == 1/sqrt(head_size)",
+    "scaled.std ≈ raw.std × scale",
+    "scaled softmax 最大概率明显小于 raw"
+  ],
+  "glossary": [
+    {
+      "term": "点积 dot product",
+      "explanation": "两个向量对应位相乘再求和，结果是一个标量，衡量方向相似度。"
+    },
+    {
+      "term": "softmax",
+      "explanation": "把任意实数向量变成和为 1 的概率分布，数值差距越大分布越尖。"
+    },
+    {
+      "term": "熵 entropy",
+      "explanation": "衡量分布有多平：越接近均匀熵越大，越接近 one-hot 熵越小。"
+    }
+  ]
+}

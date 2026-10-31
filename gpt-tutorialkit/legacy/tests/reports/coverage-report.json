@@ -1,0 +1,17 @@
+{
+  "files": {
+    "bigram.py": {
+      "effective_lines": 79,
+      "covered_lines": 79,
+      "coverage_pct": 100.0,
+      "uncovered": []
+    },
+    "gpt.py": {
+      "effective_lines": 155,
+      "covered_lines": 155,
+      "coverage_pct": 100.0,
+      "uncovered": []
+    }
+  },
+  "statement_count": 157
+}

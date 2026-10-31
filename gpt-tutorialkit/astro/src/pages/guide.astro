@@ -1,0 +1,91 @@
+---
+import Layout from '../layouts/Layout.astro';
+import CourseSidebar from '../components/CourseSidebar.astro';
+import { lessons, modules, SOURCE_URL } from '../lib/course';
+
+const first = lessons[0];
+---
+<Layout title="全貌导读 · 手写 GPT">
+  <div class="lesson-shell guide">
+    <CourseSidebar current="guide" />
+    <main class="guide-main" id="main-content" tabindex="-1">
+      <article class="prose">
+        <span class="badge badge-secondary">开始之前 · 5 分钟</span>
+        <h1>从零写出 Karpathy 的 gpt.py</h1>
+        <p class="lead">
+          这门课的终点是一份 225 行的 <a href={`${SOURCE_URL}/gpt.py`}>gpt.py</a>：读莎士比亚全集，学会一个字符一个字符地「接着写」。
+          你会把它拆成 {lessons.length} 块，每块亲手写一遍，由判题器和原版逐元素比对。
+        </p>
+
+        <section>
+          <h2>整件事只有一个游戏：猜下一个字符</h2>
+          <p>给模型一段文字，让它给「下一个字符是什么」打分。训练时答案就藏在原文里——就是紧跟着的那个字符，不需要人标注。</p>
+          <div class="loop-demo">
+            <div class="card"><b>看到</b><span class="mono">"hell"</span></div>
+            <div class="card"><b>模型给 65 个字符打分</b><span class="mono">o: 高, a: 低…</span></div>
+            <div class="card"><b>训练：对照答案</b><span class="mono">答案是 "o"</span></div>
+            <div class="card"><b>生成：抽一个接上</b><span class="mono">"hello"</span></div>
+          </div>
+          <p>整份 gpt.py 就是围绕这个游戏的三段代码：</p>
+          <div class="flow">
+            <div class="card flow-card">
+              <h3>准备题目</h3>
+              <ol><li>读文本</li><li>字符 ↔ 整数</li><li>切 train / val</li><li>随机剪一批 (x, y)</li></ol>
+            </div>
+            <div class="card flow-card">
+              <h3>模型：输入一串字符，输出每个位置对下一字符的打分</h3>
+              <ol><li>查字符向量 + 位置向量</li><li>N 个 Block（注意力 + 前馈）</li><li>映射回 65 个分数</li></ol>
+              <p>先用最简单的 Bigram（只看上一个字符）把流程走通，再换成能看整段上文的 GPT。</p>
+            </div>
+            <div class="card flow-card">
+              <h3>训练与生成</h3>
+              <ol><li>算 loss</li><li>backward 求梯度</li><li>optimizer 走一步</li><li>重复；最后逐字符采样生成</li></ol>
+            </div>
+          </div>
+        </section>
+
+        <section>
+          <h2>每一课怎么学</h2>
+          <ol>
+            <li><strong>读「为什么」</strong>：只讲这一块要解决什么问题，不复述代码。</li>
+            <li><strong>先猜一猜</strong>：运行前写下你对形状 / 数值的预期，再点开对照。猜错的地方就是要学的地方。</li>
+            <li><strong>补全 TODO</strong>：右侧代码里高亮的 <code>TODO('…')</code> 换成你的实现。前面课写过的部件直接从原版取来用，你只专注这一块。</li>
+            <li><strong>检查</strong>：判题器在本机执行你的代码，用同一个随机种子和原版逐项比对，告诉你哪一条不对、往哪改。</li>
+            <li><strong>对照原版</strong>：通过后展开原版那几行，看看和你写的有什么不同。</li>
+          </ol>
+          <p>卡住时，左侧「提示」是一级一级往答案靠的；最后还有「看答案」，但会在目录里留下半实心标记，提醒你回来自己再写一遍。</p>
+        </section>
+
+        <section>
+          <h2>学习路线</h2>
+          <ol class="route">
+            {modules.map((m, i) => {
+              const items = lessons.filter((l) => l.module === m.id);
+              return (
+                <li>
+                  <span class="route-num">{i + 1}</span>
+                  <div>
+                    <a class="route-title" href={`/${items[0].slug}`}>{m.title}</a>
+                    <p>里程碑：{m.milestone}</p>
+                  </div>
+                  <span class="route-count">第 {items[0].order}–{items[items.length - 1].order} 课</span>
+                </li>
+              );
+            })}
+          </ol>
+          <p>你需要会读写普通 Python；PyTorch、张量形状、注意力都会在用到时讲。数学只用到矩阵乘法和 softmax，课里都有能跑的小实验。</p>
+        </section>
+
+        <section>
+          <h2>几个事先说清楚的边界</h2>
+          <ul>
+            <li>代码在你本机用真实 PyTorch（CPU）运行，模型尺寸调小了（详见第 1 课），几十秒内能训完，但生成的文字不会像原版 GPU 训练那样通顺。</li>
+            <li><code>load_original('gpt')</code> 是本课的辅助函数：载入原版的定义和数据，不执行原版末尾的长训练。每次运行都是全新进程，上一课训练出的权重不会带到下一课。</li>
+            <li>进度和草稿只存在这个浏览器的 localStorage 里。</li>
+          </ul>
+          <a class="btn btn-primary" href={`/${first.slug}`}>开始第 1 课：{first.title} →</a>
+        </section>
+      </article>
+    </main>
+  </div>
+</Layout>

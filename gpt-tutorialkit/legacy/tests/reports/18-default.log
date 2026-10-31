@@ -1,0 +1,12 @@
+# 18 把注意力权重乘到 value 上：Head 的完整输出 (default)  exit=0 3762ms PASS=True
+--- stdout ---
+Head 输出形状 = (1, 4, 8)   # (B,T,head_size)
+手动 wei @ v 与 Head 前向是否一致:  True
+t=0  手算 out 与模型 out 最大差 = 0.0
+t=1  手算 out 与模型 out 最大差 = 0.0
+t=2  手算 out 与模型 out 最大差 = 0.0
+t=3  手算 out 与模型 out 最大差 = 0.0
+OK
+
+--- stderr ---
+

@@ -1,0 +1,18 @@
+# 19 多头注意力：多个 Head 并联、拼接、再投影回去 (debug)  exit=1 3785ms PASS=True
+--- stdout ---
+cat 后形状 (8, 5, 8)
+
+--- stderr ---
+Traceback (most recent call last):
+  File "<string>", line 10, in <module>
+    y = mha.proj(out)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1787, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py", line 1798, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/Users/bytedance/codes/myself/70days/gpt-tutorialkit/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py", line 134, in forward
+    return F.linear(input, self.weight, self.bias)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+RuntimeError: addmm: mat1 and mat2 shapes cannot be multiplied (40x8 and 32x32)
+

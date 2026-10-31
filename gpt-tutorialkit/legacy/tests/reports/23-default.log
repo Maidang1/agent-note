@@ -1,0 +1,17 @@
+# 23 GPT 模型的五脏六腑：embedding、blocks、ln_f、lm_head (default)  exit=0 3179ms PASS=True
+--- stdout ---
+词表大小 vocab_size = 65
+特征宽度 n_embd = 32  block_size = 8  n_layer = 2
+token_embedding_table 形状: (65, 32) (vocab_size, n_embd)
+position_embedding_table 形状: (8, 32) (block_size, n_embd)
+blocks 层数: 2
+ln_f: LayerNorm
+lm_head 形状: (65, 32) (vocab_size, n_embd)
+子模块登记: token_embedding_table -> Embedding
+子模块登记: position_embedding_table -> Embedding
+子模块登记: blocks -> Sequential
+子模块登记: ln_f -> LayerNorm
+子模块登记: lm_head -> Linear
+
+--- stderr ---
+

@@ -1,0 +1,12 @@
+# 24 为什么要 _init_weights：开工前把权重摆到好位置 (default)  exit=0 3225ms PASS=True
+--- stdout ---
+lm_head 权重均值: -0.00015458227426279336  标准差: 0.019867146387696266
+初始化前 bias 前5个: [0.1339377462863922, 0.1548789143562317, 0.026183266192674637, 0.27099815011024475, 0.25635313987731934]
+初始化后 bias 是否全零: True
+初始化后 Linear 权重标准差: 0.019598446786403656
+初始化后 Embedding 权重标准差: 0.016322633251547813
+
+--- stderr ---
+<string>:11: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+Consider using tensor.detach() first. (Triggered internally at /Users/runner/work/pytorch/pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:821.)
+
