@@ -1,8 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 168 24" role="img" aria-label="Harness Explorer">
-  <rect x="0" y="0" width="24" height="24" rx="5" fill="#1f2a44"/>
-  <path d="M12 7v4.5M12 11.5l-5 4.5M12 11.5l5 4.5" stroke="#9fb4ff" stroke-width="1.6" fill="none" stroke-linecap="round"/>
-  <circle cx="12" cy="6" r="2.6" fill="#ffffff"/>
-  <circle cx="7" cy="17.5" r="2.6" fill="#9fb4ff"/>
-  <circle cx="17" cy="17.5" r="2.6" fill="#9fb4ff"/>
-  <text x="32" y="17" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#e6e9f2">Harness Explorer</text>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" aria-label="Harness Explorer" role="img" viewBox="0 0 168 24"><rect width="24" height="24" x="0" y="0" fill="#1f2a44" rx="5"/><path fill="none" stroke="#9fb4ff" stroke-linecap="round" stroke-width="1.6" d="M12 7v4.5M12 11.5l-5 4.5M12 11.5l5 4.5"/><circle cx="12" cy="6" r="2.6" fill="#fff"/><circle cx="7" cy="17.5" r="2.6" fill="#9fb4ff"/><circle cx="17" cy="17.5" r="2.6" fill="#9fb4ff"/><text x="32" y="17" fill="#e6e9f2" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600">Harness Explorer</text></svg>
