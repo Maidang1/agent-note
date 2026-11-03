@@ -19,6 +19,20 @@ idx_cond = idx[:, -block_size:]
 
 `idx` 本身不裁剪，它保存生成的完整文本；只有送进模型的 `idx_cond` 是截短的。
 
+```tensors 图解：idx 越来越长，送进模型的只有最后 block_size 个（block_size=4）
+voc = list('abcdefgh')
+block_size = 4
+dims('idx', 'B T'); as_chars('idx', voc); dims('idx_cond', 'B T'); as_chars('idx_cond', voc)
+idx = torch.tensor([[0, 1, 2]])          #: 刚开始生成：上文 3 个字符，还没超过 block_size
+idx_cond = idx[:, -block_size:]          #: 不足 4 个时，`[-4:]` 取到全部，不会报错
+idx = torch.tensor([[0, 1, 2, 3, 4, 5]]) #: 又生成了 3 个：现在 6 个字符，超过了 block_size
+hl('idx', S[:, -block_size:]); show('idx')
+idx_cond = idx[:, -block_size:]          #: 只截最后 4 个（加框）送进模型。`idx` 本身不裁剪，保存着完整文本
+idx = torch.cat((idx, torch.tensor([[6]])), dim=1)   #: 新抽到的字符接到 `idx` 末尾
+hl('idx', S[:, -block_size:]); show('idx')
+idx_cond = idx[:, -block_size:]          #: 下一轮再截最后 4 个：窗口向右滑了一格，最早的 `c` 被「忘掉」了
+```
+
 <div class="predict">
 
 **先猜一猜**：去掉裁剪那一行，生成到第几个字符时会报错？报什么错？

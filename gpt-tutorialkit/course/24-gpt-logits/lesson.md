@@ -20,6 +20,23 @@ lm_head (B,T,65)   ← 每个位置对下一个字符的 65 个打分
 
 后面算 loss 的部分和 Bigram **一字不差**。这是有意的：GPT 和 Bigram 的接口完全一样（输入 idx 和可选的 targets，返回 logits 和 loss），所以第 10–12 课写的训练循环、`estimate_loss`、`generate` 都能直接用。
 
+```tensors 图解：forward 后半段，形状一路怎么变（B=1, T=3, n_embd=4, vocab=5）
+B, T, C, V = 1, 3, 4, 5
+voc = ['a', 'b', 'c', 'd', 'e']
+blocks = nn.Sequential(nn.Linear(C, C), nn.Linear(C, C))
+ln_f = nn.LayerNorm(C)
+lm_head = nn.Linear(C, V)
+dims('x', 'B T C'); dims('logits', 'B T V'); dims('logits', 'B*T V'); labels('logits', cols=voc)
+dims('targets', 'B T'); as_chars('targets', voc)
+x = torch.randn(B, T, C)                 #: 上一课的 `tok_emb + pos_emb`
+x = blocks(x)                            #: 穿过所有 Block：数变了，形状 `(B, T, C)` 不变（这里用两个 Linear 代替 Block，只看形状）
+x = ln_f(x)                              #: 最后一次 LayerNorm：每行均值 0、标准差 1
+logits = lm_head(x)                      #: `lm_head`：每个位置 C=4 维 → V=5 个打分，最后一维从 C 变成 vocab_size
+targets = torch.tensor([[2, 0, 4]])      #: 训练时传入的答案
+logits = logits.view(B*T, V)             #: loss 分支和第 8 课一字不差：先摊平……
+loss = F.cross_entropy(logits, targets.view(B*T))   #: ……再算交叉熵
+```
+
 <div class="predict">
 
 **先猜一猜**：Bigram 的 logits 只取决于当前字符。GPT 的 logits[b, t] 取决于哪些输入？

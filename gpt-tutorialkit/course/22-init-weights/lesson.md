@@ -22,6 +22,18 @@ PyTorch 的默认初始化不是为这个模型设计的：logits 的数值偏�
 
 Karpathy 在 README 里专门提到，视频里没讲初始化，但它对训练效果很重要。
 
+```tensors 图解：初始化的大小怎么影响一开始的预测（n_embd=8 → vocab=6，4 个位置）
+C, V = 8, 6
+lm_head = nn.Linear(C, V)
+x = torch.randn(4, C)
+dims('W', 'V C'); dims('p', 'N V'); dims('p2', 'N V')
+W = lm_head.weight.detach().clone()      #: PyTorch 默认初始化的权重：大多在 ±0.1～0.3 之间（每张图的颜色按它自己的最大值算，比大小请看数字）
+p = F.softmax(lm_head(x), dim=-1)        #: 4 个位置的预测概率：深浅不一，还没学就有了「偏见」
+torch.nn.init.normal_(lm_head.weight, mean=0.0, std=0.02)   #: `normal_` 原地改写权重（带下划线 = 原地修改），返回的就是新权重：都只有 ±0.0x
+torch.nn.init.zeros_(lm_head.bias)       #: bias 全部置 0
+p2 = F.softmax(lm_head(x), dim=-1)       #: 再看概率：几乎每格都是 1/6 ≈ 0.17，对每个字符一视同仁，初始 loss ≈ ln 6
+```
+
 <div class="predict">
 
 **先猜一猜**：用原版初始化和用 PyTorch 默认初始化，初始 loss 分别是多少？

@@ -18,6 +18,21 @@ refs: gpt.py:106-119
 
 Karpathy 的说法：注意力是位置之间的**交流（communication）**，前馈是每个位置自己的**计算（computation）**。
 
+```tensors 图解：每个位置各自「扩宽 → ReLU → 压回」（n_embd=2 → 8 → 2；只画一段，T=3）
+T, n_embd = 3, 2
+net = nn.Sequential(nn.Linear(n_embd, 4 * n_embd), nn.ReLU(), nn.Linear(4 * n_embd, n_embd))
+dims('x', 'T C'); dims('h', 'T 4C'); dims('out', 'T C'); dims('out2', 'T C'); dims('x2', 'T C')
+x = torch.randn(T, n_embd)               #: 输入：3 个位置 × 2 维
+h = net[0](x)                            #: 第一层 Linear：每个位置 2 维 → 8 维（4 倍宽）
+before('h'); hl('h', h < 0)
+h = net[1](h)                            #: ReLU：负数（橙色，加框）全部变成 0，正数原样保留
+out = net[2](h)                          #: 第二层 Linear：8 维压回 2 维，形状和输入一样。真实代码最后还有一个 Dropout
+x2 = x.clone()
+x2[0] += 1.0
+hl('x2', S[0]); hl('out2', S[0]); show('x2')
+out2 = net(x2)                           #: 只改第 0 个位置的输入再算一遍：只有第 0 行的输出变了，第 1、2 行和上面完全一样
+```
+
 <div class="predict">
 
 **先猜一猜**：`n_embd=32` 时，这一层有多少个参数？原版 `n_embd=384` 时呢？

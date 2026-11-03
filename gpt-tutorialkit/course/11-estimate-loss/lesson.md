@@ -17,6 +17,29 @@ refs: bigram.py:46-58, gpt.py:50-62
 - `@torch.no_grad()`：不记录计算图、不算梯度。评估不需要反向传播，这样更快、更省内存。
 - `model.eval()` / `model.train()`：有些层在训练和评估时行为不同，比如 dropout（第 16 课）。评估前切到 eval，结束后**一定要切回** train，否则后面的训练就悄悄关掉了 dropout。Bigram 没有这类层，但原版保持了这个好习惯。
 
+```tensors 图解：losses 这个一维张量是怎么被填满的（eval_iters = 5）
+table = nn.Embedding(65, 65)
+data = torch.randint(65, (2000,))
+def get_batch(split):
+    ix = torch.randint(len(data) - 8, (4,))
+    return torch.stack([data[i:i+8] for i in ix]), torch.stack([data[i+1:i+9] for i in ix])
+def model(X, Y):
+    return None, F.cross_entropy(table(X).view(-1, 65), Y.view(-1))
+eval_iters = 5
+dims('losses', 'eval_iters')
+losses = torch.zeros(eval_iters)         #: 先准备 5 个空位
+X, Y = get_batch('val')
+logits, loss = model(X, Y)
+hl('losses', S[0]); show('losses')
+losses[0] = loss.item()                  #: k = 0：抽一批、算 loss，`.item()` 变成普通数字，填进第 0 格
+show('losses')
+for k in range(1, eval_iters):
+    X, Y = get_batch('val')
+    logits, loss = model(X, Y)
+    losses[k] = loss.item()              #: 循环做完 5 批：每批的 loss 都不太一样，这就是单批的噪声
+mean = losses.mean()                     #: 平均成一个数，存进 `out['val']`。批数越多，越稳定
+```
+
 <div class="predict">
 
 **先猜一猜**：模型还没训练，train loss 和 val loss 谁高？差多少？

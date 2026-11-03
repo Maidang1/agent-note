@@ -63,6 +63,8 @@ const originals = meta.refs.map((r) => ({
           )}
         </header>
 
+        <p class="lesson-refs">基础速查：<a href="/matrices#function-index">矩阵运算与函数图解索引</a></p>
+
         <Content />
 
         {isModuleEnd && (
@@ -73,7 +75,7 @@ const originals = meta.refs.map((r) => ({
         )}
 
         <nav class="lesson-pager" aria-label="上一课 / 下一课">
-          {prev ? <a href={`/${prev.slug}`} class="btn btn-ghost">← {prev.title}</a> : <a href="/guide" class="btn btn-ghost">← 全貌导读</a>}
+          {prev ? <a href={`/${prev.slug}`} class="btn btn-ghost">← {prev.title}</a> : <a href="/matrices" class="btn btn-ghost">← 矩阵与张量运算</a>}
           {next && <a href={`/${next.slug}`} class="btn btn-outline">{next.title} →</a>}
         </nav>
       </article>

@@ -23,6 +23,22 @@ out = wei @ x               ← 按权重加权求和
 
 写法 3 里打分全是 0，softmax 后就是均匀平均。**自注意力只改一处**：打分不再是常数 0，而是由数据算出来的（下两课的 `q @ kᵀ`）。于是每个位置可以自己决定更关注前文的哪些字符。
 
+```tensors 图解：写法 2 和写法 3，每一步的矩阵（T=4, C=2，只画一段）
+T = 4
+dims('x', 'T C'); dims('wei', 'T T'); dims('xbow', 'T C'); dims('rowsum', 'T 1'); dims('tril', 'T T')
+x = torch.randn(T, 2)                    #: 4 个位置，每个位置一个 2 维向量
+wei = torch.tril(torch.ones(T, T))       #: 写法 2：下三角全 1。第 t 行只在第 0..t 列有 1：「自己和过去」
+rowsum = wei.sum(1, keepdim=True)        #: 每行的和 `(T, 1)`：1, 2, 3, 4
+wei = wei / rowsum                       #: 每行除以自己的和（广播）→ 每行平均分配，加起来是 1
+xbow = wei @ x                           #: `(T, T) @ (T, C) = (T, C)`：第 t 行 = x 前 t+1 行的加权和
+hl('wei', S[2]); hl('x', S[:3]); hl('xbow', S[2]); show('wei', 'x', 'xbow')
+x[:3].mean(0)                            #: 验证第 2 行：用 wei 第 2 行的权重 (1/3, 1/3, 1/3, 0) 对 x 前 3 行求平均，正好等于 `xbow[2]`
+tril = torch.tril(torch.ones(T, T))
+wei = torch.zeros((T, T))                #: 写法 3：打分先全是 0（自注意力里，这里会换成 `q @ kᵀ`）
+wei = wei.masked_fill(tril == 0, float('-inf'))   #: 上三角（未来）填成 −∞（斜线格）
+wei = F.softmax(wei, dim=-1)             #: 每行 softmax：−∞ 变成 0，其余平分。和写法 2 的 wei 一模一样
+```
+
 <div class="predict">
 
 **先猜一猜**：`T=4` 时，写法 2 里的 `wei` 长什么样？

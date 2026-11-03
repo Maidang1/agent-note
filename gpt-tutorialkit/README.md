@@ -16,6 +16,8 @@
 | 6 训练你的 GPT | 26–28 | CPU 上训到 val ≈ 2.17，超过 Bigram；采样、存档 |
 | 7 结业 | 29 | 闭卷复现 gpt.py |
 
+开始前先读 `/matrices`（矩阵与张量运算）：15 组真实 PyTorch 数值图解，覆盖 shape、逐元素运算、矩阵乘法、转置、Linear、广播、汇总、变形、切片、查表、拼接、softmax、掩码、loss、采样与常用层，并提供后续课程的函数图解索引。入门章位于目录最前面的准备区，每课都能返回索引。
+
 另有 `/guide`（全貌导读）和 `/map`（源码地图：原版每一行对应哪一课，做完的课会点亮）。
 
 ## 环境要求
@@ -65,6 +67,7 @@ cd astro && npm ci && cd ..
 ## 目录
 
 ```
+course/matrices.md         # 入门图解源文件，生成 astro/src/pages/matrices.md
 course/NN-<slug>/          # 课程源文件（唯一需要手写的地方），每课三个文件：
   lesson.md                #   课文 + frontmatter
   code.py                  #   完整答案代码，行尾标记哪些行留给学习者写
@@ -73,6 +76,8 @@ scripts/
   build_course.py          # course/ → astro/src/content/tutorial + astro/src/nav-order.json（增量同步）
   check_course.py          # 课程自检：答案必须全过、初始代码必须有不过的
   coursecode.py            # 从 code.py 推导初始代码 / 参考答案
+  tensorfig.py             # 课文里 ```tensors 图解的执行与绘制
+  tracefig.py              # 「看答案」时整段代码的执行图解
 runtime/tutorial_runtime/
   loader.py                # load_original：AST 截取原版定义、施加轻量覆盖、固定种子
   checking.py              # 判题小工具：check / expect / same / same_init / same_forward / copy_weights
@@ -100,7 +105,24 @@ refs: gpt.py:40-48         # 对应的原版行，逗号分隔；可为空。用
 ---
 ```
 
-正文惯例：`## 为什么…` → `<div class="predict">` 先猜一猜（答案放 `<details>`）→ `## 你的任务` → 提示 `<details>` → `## 通过之后`。
+正文惯例：`## 为什么…` → 图解（```` ```tensors ```` 块）→ `<div class="predict">` 先猜一猜（答案放 `<details>`）→ `## 你的任务` → 提示 `<details>` → `## 通过之后`。
+
+**图解**：```` ```tensors 标题 ```` 块里写一小段真实的 PyTorch 代码，`build_course.py` 构建时用固定种子执行它，
+把每一步的张量画成带形状、维度名、正负着色的格子图（`scripts/tensorfig.py`）。行尾带 `#: 说明` 的语句是一个步骤，
+其余语句只执行不显示；`dims` / `labels` / `as_chars` / `hl` / `show` / `before` 控制怎么画，用法见 `tensorfig.py` 顶部注释。
+
+**答案执行图解**：点「看答案」后，右侧输出区会显示参考答案整段代码的真实运行过程：按执行顺序排列，每行只画第一次执行
+（循环注明次数），调用进函数的行向右缩进，画出读入的张量、赋值结果、if 条件和 print 输出，学习者要写的行标 ✎
+（`scripts/tracefig.py`，用 `sys.settrace` 跟踪）。它由 `build_course.py` 预先生成到
+`astro/public/traces/<课 id>.html`，按答案和 runtime 的内容哈希缓存，没变就不重跑；首次全量生成约 35 秒，
+`--no-trace` 可跳过。
+
+```python
+dims('idx', 'B T'); as_chars('idx', voc)
+idx = torch.tensor([[1, 0, 2]])     #: 输入 "hel" 的编号
+hl('logits', S[:, -1, :])           # 下一步高亮最后一个位置
+logits = table(idx)                 #: 每个编号取出表里的一行 → (B, T, C)
+```
 
 **`code.py`**：只写一份完整、能跑通的答案，在行尾加标记，构建时推导出初始代码：
 

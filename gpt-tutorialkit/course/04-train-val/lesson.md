@@ -13,6 +13,19 @@ refs: gpt.py:34-38
 
 再切一刀：**前 90% 训练，后 10% 验证**。训练只用前一份；验证集模型从没见过，用来检查它是学到了规律还是在背书。训练 loss 一直降、验证 loss 却开始升，就是**过拟合**。
 
+```tensors 图解：一维张量和切片（用 14 个字符代替 111 万个）
+text = "First Citizen:"
+chars = sorted(set(text))
+stoi = {c: i for i, c in enumerate(chars)}
+dims('data', 'N'); as_chars('data', chars)
+data = torch.tensor([stoi[c] for c in text], dtype=torch.long)   #: 整段文字编码成一维的 long 张量，形状 `(N,)`
+n = int(0.9*len(data))           #: 前 90% 的长度，取整
+hl('data', S[:n]); show('data')
+train_data = data[:n]            #: `data[:n]`：前 n 个（加框）当训练集
+hl('data', S[n:]); show('data')
+val_data = data[n:]              #: `data[n:]`：剩下的一整块当验证集，训练时模型从不看它
+```
+
 <div class="predict">
 
 **先猜一猜**：为什么直接按位置切，而不是随机挑 10% 的字符当验证集？

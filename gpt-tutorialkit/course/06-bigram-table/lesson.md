@@ -20,6 +20,18 @@ GPT 很复杂，但「输入字符编号 → 对下一个字符打分 → 算 lo
 
 `nn.Embedding(num, dim)` 就是一张 `num × dim` 的可学习表，用整数编号去取对应的那一行。在 GPT 里它会用来存「每个字符的向量」；在 Bigram 里，那一行直接当作打分。
 
+```tensors 图解：nn.Embedding 就是一张表，用编号取一行（4 个字符的小字符表）
+voc = ['e', 'h', 'l', 'o']
+table = nn.Embedding(4, 4)
+dims('W', 'V C'); labels('W', rows=voc, cols=voc)
+W = table.weight          #: `nn.Embedding(4, 4)` 建出一张 4 × 4 的随机表。第 i 行 = 上一个字符是第 i 个时，对下一个字符的 4 个打分
+dims('idx', 'N'); as_chars('idx', voc)
+idx = torch.tensor([1])   #: 想查 `h`：它的编号是 1
+hl('W', S[1]); show('W'); dims('row', 'N C'); labels('row', cols=voc)
+row = table(idx)          #: 查表 = 原样取出第 1 行（加框）。形状 `(1, 4)`：1 个输入，4 个打分
+n_params = sum(p.numel() for p in table.parameters())   #: 参数个数 = 表里的格子数 4 × 4。真实的表是 65 × 65 = 4225
+```
+
 <div class="predict">
 
 **先猜一猜**：这个模型一共有多少个可学习的参数？

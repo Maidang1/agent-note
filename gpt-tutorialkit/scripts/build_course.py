@@ -13,18 +13,23 @@
 """
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from coursecode import derive
+from coursecode import derive, marked_lines
+from tensorfig import render as render_tensors
+from tracefig import trace_html
 
 ROOT = Path(__file__).resolve().parent.parent
 COURSE = ROOT / "course"
 ASTRO = ROOT / "astro" / "src" / "content" / "tutorial"
 NAV_ORDER_FILE = ROOT / "astro" / "src" / "nav-order.json"
 ORIGINALS = ROOT / "runtime" / "tutorial_runtime" / "_originals"
+TRACES = ROOT / "astro" / "public" / "traces"  # 「看答案」时右侧的执行图解 <课 id>.html，前端按需 fetch
 
 # 模块顺序即学习路径；每个模块结束时都有一个能跑起来的里程碑。
 MODULES = {
@@ -112,6 +117,42 @@ def sync(files: dict[Path, str]) -> None:
             path.rmdir()
 
 
+def build_traces(lessons) -> None:
+    """为每课执行一遍参考答案并画图（tracefig.py）。按内容哈希缓存，答案和运行时没变就不重跑。"""
+    deps = [Path(__file__).parent / n for n in ("tracefig.py", "tensorfig.py", "coursecode.py")]
+    deps += sorted(p for p in (ROOT / "runtime").rglob("*") if p.is_file() and "__pycache__" not in p.parts)
+    base = hashlib.sha256(b"".join(p.read_bytes() for p in deps)).hexdigest()
+
+    jobs = {}
+    for d, _, _ in lessons:
+        src = (d / "code.py").read_text(encoding="utf-8")
+        solution, lines = derive(src)[1], marked_lines(src)
+        key = hashlib.sha256(f"{base}\n{lines}\n{solution}".encode()).hexdigest()[:16]
+        out = TRACES / f"{d.name}.html"
+        if out.is_file() and out.read_text(encoding="utf-8").startswith(f"<!-- trace {key} -->"):
+            continue
+        jobs[d.name] = (solution, lines, key, out)
+
+    def run(item):
+        name, (solution, lines, key, out) = item
+        try:
+            body = trace_html(solution, lines)
+        except Exception as e:  # 图解失败不挡住构建，旧文件删掉以免显示过时的图
+            out.unlink(missing_ok=True)
+            return f"  {name}: 执行图解失败：{e}"
+        out.write_text(f"<!-- trace {key} -->\n{body}", encoding="utf-8")
+        return f"  {name}: 已更新执行图解"
+
+    TRACES.mkdir(parents=True, exist_ok=True)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for msg in pool.map(run, sorted(jobs.items())):
+            print(msg)
+    keep = {f"{d.name}.html" for d, _, _ in lessons}
+    for p in TRACES.glob("*.html"):
+        if p.name not in keep:
+            p.unlink()
+
+
 def main() -> int:
     lessons = []
     for d in sorted(p for p in COURSE.iterdir() if p.is_dir() and re.match(r"^\d{2}-", p.name)):
@@ -132,7 +173,7 @@ def main() -> int:
         module = meta["module"]
         files[ASTRO / module / "meta.md"] = f"---\ntype: part\ntitle: {yaml_str(MODULES[module][0])}\n---\n"
         ldir = ASTRO / module / d.name
-        files[ldir / "content.md"] = f"---\ntype: lesson\ntitle: {yaml_str(meta['title'])}\n---\n\n{cjk_bold(body)}"
+        files[ldir / "content.md"] = f"---\ntype: lesson\ntitle: {yaml_str(meta['title'])}\n---\n\n{cjk_bold(render_tensors(body, d.name))}"
         starter, solution = derive((d / "code.py").read_text(encoding="utf-8"))
         files[ldir / "_files" / "lesson.py"] = starter
         files[ldir / "_solution" / "lesson.py"] = solution
@@ -146,7 +187,13 @@ def main() -> int:
             "refs": meta["refs"],
         })
 
+    foundation = COURSE / "matrices.md"
+    foundation_page = ROOT / "astro" / "src" / "pages" / "matrices.md"
+    foundation_body = cjk_bold(render_tensors(foundation.read_text(encoding="utf-8"), "matrices"))
+    foundation_page.write_text('---\nlayout: ../layouts/Foundation.astro\n---\n\n' + foundation_body, encoding="utf-8")
     sync(files)
+    if "--no-trace" not in sys.argv:
+        build_traces(lessons)
     NAV_ORDER_FILE.write_text(json.dumps({
         "modules": [{"id": k, "title": v[0], "milestone": v[1]} for k, v in MODULES.items()
                     if any(n["module"] == k for n in nav)],

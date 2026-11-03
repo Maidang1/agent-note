@@ -38,6 +38,9 @@ export default function PythonRunner({ lessonId, initialCode, solutionCode, orig
   const [result, setResult] = useState<RunResult | null>(null);
   const [viewingSolution, setViewingSolution] = useState(false);
   const [completed, setCompleted] = useState(false);
+  // 答案的执行图解：构建时预先跑好（scripts/tracefig.py），第一次看答案时再去取
+  const [trace, setTrace] = useState<{ html: string } | { error: string } | null>(null);
+  const [traceWide, setTraceWide] = useState(false); // 看图解时把编辑器压矮，给图解更多空间
   const mine = useRef<string | null>(null); // 看答案前的自己的代码
 
   // 草稿和完成状态只在浏览器里读，避免和服务端渲染的初始代码冲突
@@ -52,6 +55,16 @@ export default function PythonRunner({ lessonId, initialCode, solutionCode, orig
     const t = setTimeout(() => saveDraft(lessonId, code === initialCode ? null : code), 300);
     return () => clearTimeout(t);
   }, [code, viewingSolution, lessonId, initialCode]);
+
+  useEffect(() => {
+    if (!viewingSolution || trace) return;
+    let cancelled = false;
+    fetch(`/traces/${lessonId}.html`)
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`))))
+      .then((html) => { if (!cancelled) setTrace({ html }); })
+      .catch((e: unknown) => { if (!cancelled) setTrace({ error: e instanceof Error ? e.message : String(e) }); });
+    return () => { cancelled = true; };
+  }, [viewingSolution, trace, lessonId]);
 
   async function execute(kind: Mode) {
     if (busy) return;
@@ -134,7 +147,7 @@ export default function PythonRunner({ lessonId, initialCode, solutionCode, orig
   }
 
   return (
-    <div className="runner" aria-busy={Boolean(busy)}>
+    <div className={viewingSolution && traceWide ? 'runner runner-trace-wide' : 'runner'} aria-busy={Boolean(busy)}>
       <div className="runner-toolbar" aria-label="代码操作">
         <div className="runner-file">
           <span className="runner-filename">lesson.py</span>
@@ -173,7 +186,7 @@ export default function PythonRunner({ lessonId, initialCode, solutionCode, orig
         </div>
 
         <div className="runner-scroll" aria-label="运行结果">
-          {!result && !busy && (
+          {!result && !busy && !viewingSolution && (
             <ol className="runner-steps">
               <li>读左边的「为什么」，先猜一猜</li>
               <li>把右边高亮的 <code>TODO(...)</code> 换成你的代码</li>
@@ -235,6 +248,23 @@ export default function PythonRunner({ lessonId, initialCode, solutionCode, orig
                 <pre>{result.stderr}</pre>
               </div>}
             </div>
+          )}
+
+          {viewingSolution && !busy && (
+            <details className="trace" open>
+              <summary>
+                答案执行图解
+                <button type="button" className="btn btn-ghost btn-sm trace-toggle"
+                  onClick={(e) => { e.preventDefault(); setTraceWide((w) => !w); }}>
+                  {traceWide ? '还原' : '放大看'}
+                </button>
+              </summary>
+              {!trace && <p className="runner-empty">加载中…</p>}
+              {trace && 'error' in trace && (
+                <p className="runner-empty">没有找到这一课的执行图解（{trace.error}）。运行 scripts/build_course.py 生成。</p>
+              )}
+              {trace && 'html' in trace && <div dangerouslySetInnerHTML={{ __html: trace.html }} />}
+            </details>
           )}
         </div>
       </div>

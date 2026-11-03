@@ -22,6 +22,27 @@ x (B,T,32) ─┬─ Head 1 → (B,T,8) ─┐
 
 最后的 `proj` 是一个 `n_embd → n_embd` 的线性层，把几个头的结果混合起来。它也让这一层的输出回到残差通路上（第 20 课会讲）。
 
+```tensors 图解：两个头并联，拼起来再投影（n_embd=4，2 个头，每头 head_size=2；只画一段，T=3）
+T, n_embd, n_head, hs = 3, 4, 2, 2
+tril = torch.tril(torch.ones(T, T))
+def make_head():
+    key, query, value = (nn.Linear(n_embd, hs, bias=False) for _ in range(3))
+    def head(x):
+        wei = query(x) @ key(x).transpose(-2, -1) * hs**-0.5
+        wei = F.softmax(wei.masked_fill(tril == 0, float('-inf')), dim=-1)
+        return wei @ value(x)
+    return head
+heads = [make_head() for _ in range(n_head)]
+proj = nn.Linear(n_embd, n_embd)
+dims('x', 'T C'); dims('h1', 'T hs'); dims('h2', 'T hs'); dims('cat', 'T C'); dims('out', 'T C')
+x = torch.randn(T, n_embd)               #: 输入：3 个位置 × 4 维
+h1 = heads[0](x)                         #: 头 1（第 15–17 课的整个 Head）：输出 `(T, 2)`
+h2 = heads[1](x)                         #: 头 2：结构一样、权重不同，输出也是 `(T, 2)`
+hl('cat', S[:, :2])
+cat = torch.cat([h1, h2], dim=-1)        #: 沿最后一维拼起来：左 2 列（加框）来自头 1，右 2 列来自头 2 → `(T, 4)`，又回到 n_embd 宽
+out = proj(cat)                          #: `proj`（4 → 4 的 Linear）把两个头的结果混在一起，形状不变。真实代码后面还有一个 dropout
+```
+
 <div class="predict">
 
 **先猜一猜**：为什么 `self.heads` 必须用 `nn.ModuleList`，不能用普通 Python list？

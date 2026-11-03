@@ -22,6 +22,19 @@ refs: gpt.py:121-136
 
 LayerNorm 把**每个位置**的向量归一化成均值 0、标准差 1，再乘上可学习的缩放、加上偏移。这样子层收到的输入尺度稳定，不会因为前面层的输出越加越大而失控。原版 Transformer 论文把 LayerNorm 放在残差相加**之后**；现在普遍放在子层**之前**（pre-norm），训练更稳。gpt.py 用的就是 pre-norm。
 
+```tensors 图解：LayerNorm 和残差，一步一步看（n_embd=4；只画一段，T=3）
+T, C = 3, 4
+ln1 = nn.LayerNorm(C)
+sa = nn.Linear(C, C)
+dims('x', 'T C'); dims('h', 'T C'); dims('delta', 'T C'); dims('row_mean', 'T'); dims('row_std', 'T')
+x = torch.randn(T, C) * 3 + 1            #: Block 的输入（残差主干道上的 x）：各行的数值大小、平均值都不一样
+h = ln1(x)                               #: `ln1(x)`：**每一行**各自减去自己的平均、除以自己的标准差（刚初始化时缩放=1、偏移=0）
+row_mean, row_std = h.mean(-1), h.std(-1, unbiased=False)   #: 验证：每行均值 0、标准差 1
+delta = sa(h)                            #: 子层算出一个「修改量」。这里用一个 Linear 代替多头注意力，只为看清数据怎么流
+before('x')
+x = x + delta                            #: 残差：把修改量**加回** x，而不是用它替换 x，原来的信息还在。第二行 `x = x + self.ffwd(self.ln2(x))` 同理
+```
+
 <div class="predict">
 
 **先猜一猜**：如果把 `x = x + self.sa(self.ln1(x))` 写成 `x = self.sa(self.ln1(x))`，输出形状会变吗？会出什么问题？

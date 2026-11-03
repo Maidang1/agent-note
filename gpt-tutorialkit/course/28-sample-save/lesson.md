@@ -15,6 +15,26 @@ refs: gpt.py:222-225
 
 **3. 存档。** 每次运行都是新进程，训好的模型不存下来就没了。`model.state_dict()` 是一个「参数名 → 张量」的字典，只包含数字、不包含代码。读回时先用同一个类建一个空模型，再 `load_state_dict`。所以存档能不能用，取决于类的结构和参数名是否一致，这也是判题器一直要求属性名和原版完全一样的原因。
 
+```tensors 图解：prompt 怎么变成 generate 要的 (1, T)，以及 state_dict 里装的是什么
+chars = sorted(set("ROMEO:\n thyais"))
+stoi = {c: i for i, c in enumerate(chars)}
+itos = {i: c for i, c in enumerate(chars)}
+encode = lambda s: [stoi[c] for c in s]
+decode = lambda l: ''.join([itos[i] for i in l])
+dims('flat', 'T'); as_chars('flat', chars); dims('context', 'B T'); as_chars('context', chars); dims('out', 'B T'); as_chars('out', chars)
+ids = encode("ROMEO:")                   #: `encode` 得到普通的整数列表
+flat = torch.tensor(ids)                 #: 直接变张量是一维 `(T,)`，少了 batch 维，generate 用不了
+context = torch.tensor([ids], dtype=torch.long)   #: 外面多套一层 `[...]` → `(1, T)`，B=1
+out = torch.cat((context, torch.tensor([[0, 8, 4]])), dim=1)   #: generate 返回 `(1, T + max_new_tokens)`：开头是 prompt，后面接着新生成的（这里随便接了 3 个）
+text = decode(out[0].tolist())           #: `out[0]` 取出第 0 行（一维），`.tolist()` 后 decode
+class Tiny(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.token_embedding_table = nn.Embedding(5, 2)
+        self.lm_head = nn.Linear(2, 5)
+sd = {name: tuple(t.shape) for name, t in Tiny().state_dict().items()}   #: `state_dict()` 是「参数名 → 张量」的字典（这里只列出名字和形状）。读档时按名字对号入座
+```
+
 <div class="predict">
 
 **先猜一猜**：用同一个随机种子，原模型和读回的模型生成同一个 prompt，结果会一样吗？

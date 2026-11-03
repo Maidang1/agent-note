@@ -13,6 +13,14 @@ refs: gpt.py:21-27
 
 为什么要排序？Python 的 `set` 没有固定顺序，不同进程里迭代顺序可能不同。排序后，同一个字符在任何时候都拿到同一个位置，下一课的编号才稳定。
 
+```tensors 图解：拿一小段文字走一遍
+text = "hello world"               #: 原文（真实的是整本莎士比亚，这里只用 11 个字符）
+chars = sorted(list(set(text)))    #: `set` 去重、`sorted` 排序：重复的 `l`、`o` 只留一个，空格排在最前面
+vocab_size = len(chars)            #: 字符表长度：模型每一步要给这么多个候选打分
+dims('ids', 'V'); as_chars('ids', chars)
+ids = torch.arange(vocab_size)     #: 把字符表画成一排格子：第 i 格放第 i 个字符（小字，␣ 是空格）。下一课它的格子号就是编号
+```
+
 <div class="predict">
 
 **先猜一猜**：莎士比亚全集（只含英文、标点、空格、换行）大约有多少种不同字符？

@@ -13,6 +13,20 @@ refs: gpt.py:86-90
 
 **Dropout**：训练时以概率 p 随机把元素置 0，剩下的乘以 1/(1-p)，保持期望不变；评估时什么也不做。随机丢掉一些注意力连接，迫使模型不要只依赖某一条路径，起到防止过拟合的作用。这就是为什么第 11 课要求评估前 `model.eval()`。
 
+```tensors 图解：out = wei @ v（T=4, head_size=3，只画一段）
+T, hs = 4, 3
+tril = torch.tril(torch.ones(T, T))
+scores = torch.randn(T, T).masked_fill(tril == 0, float('-inf'))
+dims('wei', 'T T'); dims('dropped', 'T T'); dims('v', 'T hs'); dims('out', 'T hs')
+wei = F.softmax(scores, dim=-1)          #: 上一课得到的权重：每行加起来是 1，右上角是 0
+dropout = nn.Dropout(0.5)
+dropped = dropout(wei)                   #: train 模式下的 `self.dropout(wei)`：随机一部分权重被置 0，剩下的 ×2（这里 p=0.5；本课 p=0.1）。eval 模式下原样输出，下面按 eval 来看
+v = torch.randn(T, hs)                   #: 每个位置的 value：被关注时交出的内容
+out = wei @ v                            #: `(T, T) @ (T, hs) = (T, hs)`：第 i 行 = 按 wei 第 i 行的权重，把各位置的 v 加权求和
+hl('wei', S[2]); hl('v', S[:3]); hl('out', S[2]); show('wei', 'v', 'out')
+wei[2, 0]*v[0] + wei[2, 1]*v[1] + wei[2, 2]*v[2]   #: 验证第 2 行：只用到了 v 的前 3 行（位置 0、1、2），未来的 v[3] 权重为 0
+```
+
 <div class="predict">
 
 **先猜一猜**：`nn.Dropout(0.5)` 在 train 模式下作用于 10 个 1，输出里非零元素的值是多少？

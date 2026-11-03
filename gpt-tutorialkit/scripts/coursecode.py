@@ -37,3 +37,8 @@ def derive(src: str) -> tuple[str, str]:
         a = _ASSIGN.match(code) if kind == "TODO" else None
         starter.append(f"{a.group(1)}{a.group(2)} = {call}" if a else f"{indent}{call}")
     return "\n".join(starter) + "\n", "\n".join(solution) + "\n"
+
+
+def marked_lines(src: str) -> list[int]:
+    """参考答案里由学习者来写的行号（从 1 开始）。答案和原代码逐行对应，行号相同。"""
+    return [i for i, line in enumerate(src.splitlines(), start=1) if _MARK.search(line)]

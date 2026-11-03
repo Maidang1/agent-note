@@ -1,0 +1,24 @@
+---
+import Layout from './Layout.astro';
+import CourseSidebar from '../components/CourseSidebar.astro';
+import { lessons } from '../lib/course';
+---
+<Layout title="矩阵与张量运算 · 手写 GPT">
+  <div class="lesson-shell guide">
+    <CourseSidebar current="matrices" />
+    <main class="guide-main" id="main-content" tabindex="-1">
+      <article class="prose">
+        <header class="lesson-header">
+          <span class="badge badge-secondary">开始之前 · 基础图解</span>
+          <h1>矩阵与张量运算：先看懂每一格</h1>
+          <p class="lesson-goal">从行、列和 shape 开始，用小矩阵看懂后面 GPT 代码里的运算。</p>
+        </header>
+        <slot />
+        <nav class="lesson-pager" aria-label="学习路径">
+          <a href="/guide" class="btn btn-ghost">← 全貌导读</a>
+          <a href={`/${lessons[0].slug}`} class="btn btn-outline">开始第 1 课：{lessons[0].title} →</a>
+        </nav>
+      </article>
+    </main>
+  </div>
+</Layout>

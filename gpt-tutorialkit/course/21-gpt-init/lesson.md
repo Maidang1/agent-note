@@ -25,6 +25,18 @@ logits (B,T,65)
 
 最后一行 `self.apply(self._init_weights)` 会对每个子模块调用 `_init_weights`，下一课细讲。
 
+```tensors 图解：GPT 的三张「表」（vocab_size=5, n_embd=3, block_size=4）
+V, n_embd, block_size = 5, 3, 4
+voc = ['a', 'b', 'c', 'd', 'e']
+token_embedding_table = nn.Embedding(V, n_embd)
+position_embedding_table = nn.Embedding(block_size, n_embd)
+lm_head = nn.Linear(n_embd, V)
+dims('tok_W', 'V C'); labels('tok_W', rows=voc); dims('pos_W', 'block_size C'); dims('head_W', 'V C'); labels('head_W', rows=voc)
+tok_W = token_embedding_table.weight     #: `token_embedding_table`：每个字符一行 C 维向量（「字符是什么」）。它不再是 Bigram 那张 V × V 的打分表
+pos_W = position_embedding_table.weight  #: `position_embedding_table`：每个位置一行（「字符在哪」）。只有 block_size=4 行，所以模型只认识位置 0..3
+head_W = lm_head.weight                  #: `lm_head`：把 C 维向量变回 V 个打分。Linear 的权重形状是 `(输出, 输入) = (V, C)`；中间的 blocks 和 ln_f 见第 20、24 课
+```
+
 <div class="predict">
 
 **先猜一猜**：本课配置下 `position_embedding_table` 有多少行？如果生成时上文超过这个长度会怎样？
