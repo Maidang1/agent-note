@@ -1,0 +1,11 @@
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+.cache/
+test-results/
+playwright-report/
+.astro/
+# Explorer 时期的本地运行仓库，可能仍留在旧检出里
+.explorer/
+.explorer-e2e/

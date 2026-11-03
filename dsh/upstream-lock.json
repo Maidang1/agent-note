@@ -1,0 +1,19 @@
+{
+  "repository": "https://github.com/deepseek-ai/deepseek-harness",
+  "commit": "687f282e8625c6b8d11ff58211a90524be2e4317",
+  "commitDate": "2026-10-17",
+  "readDate": "2026-10-18",
+  "license": "MIT",
+  "reused": {
+    "@deepseek-ai/cordis": {
+      "version": "4.0.5",
+      "upstreamPath": "vendor/cordis",
+      "verification": "npm tarball src/ is byte-identical to vendor/cordis/src at the pinned commit"
+    },
+    "@deepseek-ai/cosmokit": {
+      "version": "1.8.6",
+      "upstreamPath": "vendor/cosmokit",
+      "verification": "npm tarball src/ is byte-identical to vendor/cosmokit/src at the pinned commit"
+    }
+  }
+}

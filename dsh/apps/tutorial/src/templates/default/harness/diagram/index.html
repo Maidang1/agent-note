@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>流程图</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="views" id="views" role="tablist" aria-label="视图"></div>
+    <div class="controls" id="bar" hidden>
+      <button type="button" id="first" aria-label="第一帧" title="第一帧">⏮</button>
+      <button type="button" id="prev" aria-label="上一帧" title="上一帧（←）">◀</button>
+      <button type="button" id="play" class="primary" aria-pressed="false">回放</button>
+      <button type="button" id="next" aria-label="下一帧" title="下一帧（→）">▶</button>
+      <button type="button" id="last" aria-label="最新一帧" title="最新一帧">⏭</button>
+      <input type="range" id="slider" min="0" max="0" value="0" aria-label="回放位置">
+      <span class="position" id="position"></span>
+      <button type="button" id="speed" aria-label="回放速度" title="回放速度"></button>
+    </div>
+    <button type="button" id="mode" class="toggle" aria-pressed="false" title="显示每一条会话日志事件，不显示说明">完整步骤</button>
+    <button type="button" id="toggle-side" class="toggle" aria-controls="side-panel" aria-expanded="false">步骤</button>
+    <p class="caption" id="caption" aria-live="polite"></p>
+    <p class="explain" id="explain" hidden></p>
+  </header>
+  <main class="main">
+    <div class="stage">
+      <div class="canvas" id="canvas"></div>
+      <section class="info" id="info" aria-label="节点说明" hidden></section>
+    </div>
+    <aside class="side" id="side-panel">
+      <div id="side" aria-label="步骤"></div>
+      <div class="legend" aria-hidden="true">
+        <span><i class="swatch swatch-inject"></i>依赖</span>
+        <span><i class="swatch swatch-register"></i>注册</span>
+        <span><i class="swatch swatch-flown"></i>已流经</span>
+        <span><i class="swatch swatch-current"></i>当前一步</span>
+      </div>
+    </aside>
+  </main>
+  <script type="module" src="/app.js"></script>
+</body>
+</html>

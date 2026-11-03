@@ -1,0 +1,15 @@
+diff --git a/dist/default/components/TutorialContent.astro b/dist/default/components/TutorialContent.astro
+index 8c77b9fe8a14a36a137a402cf52c3203ada0541d..b2d093187d7c95dc4ce46490ae3d82bc8f1704bb 100644
+--- a/dist/default/components/TutorialContent.astro
++++ b/dist/default/components/TutorialContent.astro
+@@ -39,10 +39,4 @@ const { Markdown, editPageLink, prev, next } = lesson;
+     </div>
+   </div>
+ 
+-  <a
+-    class="inline-block mt-auto font-size-3.5 underline text-tk-elements-link-secondaryColor hover:text-tk-elements-link-secondaryColorHover"
+-    href="https://webcontainers.io/"
+-  >
+-    {lesson.data.i18n!.webcontainerLinkText}
+-  </a>
+ </div>

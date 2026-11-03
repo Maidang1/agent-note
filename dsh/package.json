@@ -1,0 +1,76 @@
+{
+  "name": "harness-explorer",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@10.28.0",
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json && node apps/tutorial/scripts/typecheck-lessons.ts",
+    "test": "vitest run",
+    "dev": "pnpm --filter @harness-explorer/tutorial dev",
+    "build": "pnpm --filter @harness-explorer/tutorial build",
+    "preview": "node apps/tutorial/runtime/serve.ts",
+    "start": "pnpm build && pnpm preview",
+    "lesson": "node apps/tutorial/scripts/run-lesson.ts",
+    "lessons:verify-upstream": "node scripts/verify-upstream-links.ts",
+    "test:e2e": "playwright test",
+    "check": "pnpm typecheck && pnpm test && pnpm lessons:verify-upstream && pnpm build && pnpm test:e2e"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.5"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "node-pty"
+    ],
+    "patchedDependencies": {
+      "@tutorialkit/react@1.6.0": "patches/@tutorialkit__react@1.6.0.patch",
+      "@tutorialkit/astro@1.6.0": "patches/@tutorialkit__astro@1.6.0.patch"
+    }
+  },
+  "dependencies": {
+    "@deepseek-ai/cordis": "4.0.5",
+    "@deepseek-ai/dsh-agent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-agent-loop": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-attachment": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction-basic": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction-image-offload": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-compaction-tool-result-pruner": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-fs-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm-replay": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-llm-retry": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-mcp-client": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-mcp-resources": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-repeat-tool-reminder": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-checkpoint-policy": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-persistence-jsonl": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-session-projection": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-spill": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-spill-local": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-spill-policy": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subagent-spawn-in-process": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-subprocess": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-system-prompt": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-timeout": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-token-meter": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tool-call-timeout-policy": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tool-subagent": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-tools": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-user-approval": "0.2.1-rc.2",
+    "@deepseek-ai/dsh-working-directory": "0.2.1-rc.2",
+    "@deepseek-ai/schemastery": "3.18.5"
+  }
+}

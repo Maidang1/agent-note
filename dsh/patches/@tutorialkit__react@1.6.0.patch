@@ -1,0 +1,22 @@
+diff --git a/dist/Panels/WorkspacePanel.js b/dist/Panels/WorkspacePanel.js
+index 43602764fb71fb98e7706bfcc2c6a4ef667afe7c..a1ae353bcf83f630178366bac22187c09a4fa271 100644
+--- a/dist/Panels/WorkspacePanel.js
++++ b/dist/Panels/WorkspacePanel.js
+@@ -68,7 +68,7 @@ function EditorSection({ theme, tutorialStore, hasEditor }) {
+             setHelpAction('reset');
+         }
+     }, [storeRef]);
+-    return (_jsx(Panel, { id: hasEditor ? 'editor-opened' : 'editor-closed', defaultSize: hasEditor ? 50 : 0, minSize: 10, maxSize: hasEditor ? 100 : 0, collapsible: !hasEditor, className: "transition-theme bg-tk-elements-panel-backgroundColor text-tk-elements-panel-textColor", children: _jsx(EditorPanel, { id: storeRef, theme: theme, showFileTree: tutorialStore.hasFileTree(), editorDocument: currentDocument, files: files, i18n: lesson.data.i18n, hideRoot: lesson.data.hideRoot, helpAction: helpAction, onHelpClick: lessonFullyLoaded ? onHelpClick : undefined, onFileSelect: (filePath) => tutorialStore.setSelectedFile(filePath), onFileTreeChange: onFileTreeChange, allowEditPatterns: editorConfig.fileTree.allowEdits || undefined, selectedFile: selectedFile, onEditorScroll: (position) => tutorialStore.setCurrentDocumentScrollPosition(position), onEditorChange: (update) => tutorialStore.setCurrentDocumentContent(update.content) }) }));
++    return (_jsx(Panel, { id: hasEditor ? 'editor-opened' : 'editor-closed', defaultSize: hasEditor ? 32 : 0, minSize: 10, maxSize: hasEditor ? 100 : 0, collapsible: !hasEditor, className: "transition-theme bg-tk-elements-panel-backgroundColor text-tk-elements-panel-textColor", children: _jsx(EditorPanel, { id: storeRef, theme: theme, showFileTree: tutorialStore.hasFileTree(), editorDocument: currentDocument, files: files, i18n: lesson.data.i18n, hideRoot: lesson.data.hideRoot, helpAction: helpAction, onHelpClick: lessonFullyLoaded ? onHelpClick : undefined, onFileSelect: (filePath) => tutorialStore.setSelectedFile(filePath), onFileTreeChange: onFileTreeChange, allowEditPatterns: editorConfig.fileTree.allowEdits || undefined, selectedFile: selectedFile, onEditorScroll: (position) => tutorialStore.setCurrentDocumentScrollPosition(position), onEditorChange: (update) => tutorialStore.setCurrentDocumentContent(update.content) }) }));
+ }
+ function PreviewsSection({ tutorialStore, terminalPanelRef, terminalExpanded, hideTerminalPanel, hasPreviews, hasEditor, }) {
+     const previewRef = useRef(null);
+@@ -133,7 +133,7 @@ function PreviewsSection({ tutorialStore, terminalPanelRef, terminalExpanded, hi
+             observer.disconnect();
+         };
+     }, []);
+-    return (_jsx(Panel, { id: hasPreviews ? 'previews-opened' : 'previews-closed', defaultSize: hasPreviews ? 50 : 0, minSize: panelMinSize, maxSize: hasPreviews ? 100 : 0, collapsible: !hasPreviews, className: classNames({
++    return (_jsx(Panel, { id: hasPreviews ? 'previews-opened' : 'previews-closed', defaultSize: hasPreviews ? 68 : 0, minSize: panelMinSize, maxSize: hasPreviews ? 100 : 0, collapsible: !hasPreviews, className: classNames({
+             'transition-theme border-t border-tk-elements-app-borderColor': hasEditor,
+         }), children: _jsx(PreviewPanel, { ref: previewRef, tutorialStore: tutorialStore, i18n: lesson.data.i18n, showToggleTerminal: !hideTerminalPanel, toggleTerminal: toggleTerminal }) }));
+ }
