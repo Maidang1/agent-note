@@ -18,6 +18,20 @@ refs: gpt.py:28-32
 - **encode**：字符串 → 整数列表，训练前用。
 - **decode**：整数列表 → 字符串，生成后把模型输出翻译回文字。
 
+```tensors 图解：编号就是字符在字符表里的位置
+chars = sorted(list(set("hello world")))
+dims('ids', 'V'); as_chars('ids', chars)
+ids = torch.arange(len(chars))                   #: 上一课的小字符表：格子里大字是编号，小字是字符（␣ 是空格）
+stoi = { ch:i for i,ch in enumerate(chars) }     #: `stoi`：字符 → 编号，就是把上面这排格子「从小字查大字」
+itos = { i:ch for i,ch in enumerate(chars) }     #: `itos`：反过来，编号 → 字符
+encode = lambda s: [stoi[c] for c in s]
+decode = lambda l: ''.join([itos[i] for i in l])
+codes = encode("hello")                          #: encode：逐个字符查 `stoi`，得到整数列表
+dims('t', 'T'); as_chars('t', chars)
+t = torch.tensor(codes)                          #: 放进格子看：两个 `l` 是同一个编号
+back = decode(codes)                             #: decode：逐个编号查 `itos`，拼回原来的字符串
+```
+
 <div class="predict">
 
 **先猜一猜**：`encode("A")` 和 `encode("a")` 哪个数更大？差多少？

@@ -19,6 +19,35 @@ refs: bigram.py:98-122
 
 本课的配置：`batch_size=32`、训练 3000 步、每 500 步评估一次。Bigram 很小，CPU 上几秒就跑完。
 
+```tensors 图解：训练前后，打分表学到了什么（在一段重复的短句上训练小 Bigram）
+text = "hello world. " * 50
+voc = sorted(set(text))
+V = len(voc)
+stoi = {c: i for i, c in enumerate(voc)}
+data = torch.tensor([stoi[c] for c in text])
+def get_batch():
+    ix = torch.randint(len(data) - 8, (8,))
+    return torch.stack([data[i:i+8] for i in ix]), torch.stack([data[i+1:i+9] for i in ix])
+table = nn.Embedding(V, V)
+optimizer = torch.optim.AdamW(table.parameters(), lr=1e-1)
+dims('probs_before', 'V V'); labels('probs_before', rows=voc, cols=voc)
+dims('probs_after', 'V V'); labels('probs_after', rows=voc, cols=voc)
+probs_before = F.softmax(table.weight, dim=-1)   #: 训练前，把表的每一行 softmax 成概率：随机数，看不出规律（␣ 是空格）
+history = []
+for iter in range(300):
+    if iter % 50 == 0:
+        history.append(F.cross_entropy(table(data[:-1]), data[1:]).item())
+    xb, yb = get_batch()
+    loss = F.cross_entropy(table(xb).view(-1, V), yb.view(-1))
+    optimizer.zero_grad(set_to_none=True)
+    loss.backward()
+    optimizer.step()
+dims('loss_log', 'eval'); labels('loss_log', cols=[f'{s}步' for s in range(0, 300, 50)])
+loss_log = torch.tensor(history)         #: 训练循环每隔 50 步评估一次：loss 很快从 2.45 掉到 0.5 左右，然后就降不动了——这句话里 `l` 后面可能是 `l`、`o` 或 `d`，只看前一个字符最多只能猜到这个程度
+hl('probs_after', S[stoi['h'], stoi['e']])
+probs_after = F.softmax(table.weight, dim=-1)    #: 训练 300 步后：每行的概率集中到「真正跟在后面的字符」上。比如 `h` 行几乎全压在 `e`（加框）
+```
+
 <div class="predict">
 
 **先猜一猜**：训完之后 val loss 大概能降到多少？生成的文字会像英文吗？

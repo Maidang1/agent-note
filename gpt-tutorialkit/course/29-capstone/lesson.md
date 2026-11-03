@@ -26,6 +26,24 @@ refs: gpt.py:1-225
 - **注意创建顺序。**模块里各子层的创建顺序决定了随机初始化的结果，顺序不同，「初始化与原版相同」这一项就过不了。
 - 类名 `FeedFoward` 和属性名（`sa`、`ffwd`、`ln_f`、`lm_head`……）都要和原版完全一样，原因第 28 课讲过：存档按名字对应参数。
 
+```tensors 图解：全流程形状回顾（B=2, T=3, n_embd=4, vocab=5）
+B, T, C, V = 2, 3, 4, 5
+voc = ['a', 'b', 'c', 'd', 'e']
+tok = nn.Embedding(V, C)
+pos = nn.Embedding(T, C)
+blocks = nn.Sequential(nn.Linear(C, C), nn.Linear(C, C))
+ln_f, lm_head = nn.LayerNorm(C), nn.Linear(C, V)
+dims('idx', 'B T'); as_chars('idx', voc); dims('targets', 'B T'); as_chars('targets', voc)
+dims('x', 'B T C'); dims('logits', 'B T V'); labels('logits', cols=voc); dims('probs', 'B V'); labels('probs', cols=voc)
+idx = torch.tensor([[0, 1, 2], [3, 4, 0]])       #: `get_batch` 给出的 x（第 5 课）
+targets = torch.tensor([[1, 2, 3], [4, 0, 1]])   #: y：x 右移一格
+x = tok(idx) + pos(torch.arange(T))      #: 字符向量 + 位置向量（第 23 课）
+x = ln_f(blocks(x))                      #: 穿过 Block 和 ln_f，形状不变（第 20、24 课；这里用 Linear 代替 Block）
+logits = lm_head(x)                      #: 每个位置对下一个字符的 V 个打分（第 24 课）
+loss = F.cross_entropy(logits.view(B*T, V), targets.view(B*T))   #: 摊平算交叉熵（第 8 课）
+probs = F.softmax(logits[:, -1, :], dim=-1)      #: 生成时只取最后一个位置，变成概率，再抽样（第 9、25 课）
+```
+
 <div class="predict">
 
 **先猜一猜**：整份代码去掉注释和空行有多少行？你觉得自己能不看提示写出几成？

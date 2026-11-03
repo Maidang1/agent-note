@@ -19,6 +19,22 @@ refs: bigram.py:83-96
 
 为什么要抽样而不总选最高分？总选最高分（greedy）会让文字很快陷入重复循环；按概率抽样能写出更多样的内容。
 
+```tensors 图解：生成一个字符时，张量怎么变（B=1，上文 "he"，4 个候选字符）
+voc = ['e', 'h', 'l', 'o']
+table = nn.Embedding(4, 4)
+dims('idx', 'B T'); as_chars('idx', voc)
+idx = torch.tensor([[1, 0]])             #: 当前上文 `"he"`，形状 `(1, 2)`
+dims('logits', 'B T C'); dims('logits', 'B C'); labels('logits', rows=['he'], cols=voc)
+logits, loss = table(idx), None          #: forward：每个位置都有 4 个打分，`(1, 2, 4)`
+before('logits'); hl('logits', S[:, -1, :])
+logits = logits[:, -1, :]                #: 只要最后一个位置（加框的那行）→ `(1, 4)`：对「`e` 后面是什么」的打分
+dims('probs', 'B C'); labels('probs', cols=voc)
+probs = F.softmax(logits, dim=-1)        #: 打分 → 概率，每行加起来是 1
+dims('idx_next', 'B 1'); as_chars('idx_next', voc)
+idx_next = torch.multinomial(probs, num_samples=1)   #: 按概率**抽**一个编号 → `(1, 1)`
+idx = torch.cat((idx, idx_next), dim=1)  #: 沿时间维接到末尾 → `(1, 3)`。下一轮拿它再来一遍
+```
+
 <div class="predict">
 
 **先猜一猜**：模型还没训练，生成的 200 个字符会是什么样子？

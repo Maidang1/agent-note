@@ -1,0 +1,15 @@
+<!-- trace ff3daa28556f0fe1 -->
+<figure class="tfig tfig-trace"><figcaption class="tfig-title">整段代码的运行过程（真实数据）：按执行顺序排列，每行只画第一次执行；向右缩进的是被调用的函数里的行；「读入」是这一行执行前用到的张量，其余是执行后的结果</figcaption><ol class="tfig-steps"><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">2</span><pre class="tfig-code"><code>ns = load_original(&#x27;gpt&#x27;)</code></pre></div><div class="tfig-vals"><div class="tfig-val tfig-scalar"><code>ns = {open, torch, nn, F, batch_size, block_size, max_iters, eval_interval, learning_rate, device, eval_iters, n_embd, …}（共 35 项）</code></div></div></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">3</span><pre class="tfig-code"><code>text = ns[&#x27;text&#x27;]  # 原版第 22–23 行读进来的整本莎士比亚</code></pre></div><div class="tfig-vals"><div class="tfig-val tfig-scalar"><code>text = &quot;First Citizen:\nBefore we proceed any...er; wink&#x27;st\nWhiles thou art waking.\n&quot;</code></div></div></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">5</span><pre class="tfig-code"><code>print(&#x27;总字符数:&#x27;, len(text))</code></pre></div><pre class="tfig-out">总字符数: 1115394</pre></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">6</span><pre class="tfig-code"><code>print(text[:200])</code></pre></div><pre class="tfig-out">First Citizen:
+Before we proceed any further, hear me speak.
+
+All:
+Speak, speak.
+
+First Citizen:
+You are all resolved rather to die than to famish?
+
+All:
+Resolved. resolved.
+
+First Citizen:
+First, you</pre></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">7</span><pre class="tfig-code"><code>print(&#x27;-&#x27; * 40)</code></pre></div><pre class="tfig-out">----------------------------------------</pre></li><li class="tfig-step tfig-mine"><div class="tfig-head"><span class="tfig-num">10</span><pre class="tfig-code"><code>chars = sorted(list(set(text)))</code></pre></div><p class="tfig-cap">✎ 你要写的</p><div class="tfig-vals"><div class="tfig-val tfig-scalar"><code>chars = [&#x27;\n&#x27;, &#x27; &#x27;, &#x27;!&#x27;, &#x27;$&#x27;, &#x27;&amp;&#x27;, &quot;&#x27;&quot;, &#x27;,&#x27;, &#x27;-&#x27;, &#x27;.&#x27;, &#x27;3&#x27;, &#x27;:&#x27;, &#x27;;&#x27;, ...]</code></div></div></li><li class="tfig-step tfig-mine"><div class="tfig-head"><span class="tfig-num">12</span><pre class="tfig-code"><code>vocab_size = len(chars)</code></pre></div><p class="tfig-cap">✎ 你要写的</p><div class="tfig-vals"><div class="tfig-val tfig-scalar"><code>vocab_size = 65</code></div></div></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">14</span><pre class="tfig-code"><code>print(&#x27;字符表:&#x27;, repr(&#x27;&#x27;.join(chars)))</code></pre></div><pre class="tfig-out">字符表: &quot;\n !$&amp;&#x27;,-.3:;?ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz&quot;</pre></li><li class="tfig-step"><div class="tfig-head"><span class="tfig-num">15</span><pre class="tfig-code"><code>print(&#x27;vocab_size =&#x27;, vocab_size)</code></pre></div><pre class="tfig-out">vocab_size = 65</pre></li></ol></figure>

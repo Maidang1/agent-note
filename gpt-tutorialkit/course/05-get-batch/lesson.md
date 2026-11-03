@@ -18,6 +18,27 @@ refs: gpt.py:40-48
 
 关键点：一段长度为 T 的 x 里同时藏着 T 道题——「看到前 1 个字符猜第 2 个」「看到前 2 个猜第 3 个」……一直到「看到全部 T 个猜第 T+1 个」。GPT 一次 forward 就把这 T 道题全做了。
 
+```tensors 图解：从一维的 data 剪出 (B, T) 的 x 和 y（B=2, T=4）
+text = "First Citizen:\n"
+voc = sorted(set(text))
+stoi = {c: i for i, c in enumerate(voc)}
+batch_size, block_size = 2, 4
+dims('data', 'N'); as_chars('data', voc)
+data = torch.tensor([stoi[c] for c in text])   #: 一维的 `data`（真实的有 100 万个，这里 15 个；⏎ 是换行）
+ix = torch.randint(len(data) - block_size, (batch_size,))   #: 随机抽 2 个起点。上限是 `len(data) - block_size`，保证往后还剪得下
+i = int(ix[0])
+as_chars('x0', voc); as_chars('y0', voc)
+hl('data', S[i:i+block_size]); show('data')
+x0 = data[i:i+block_size]               #: 第 0 个起点往后剪 4 个（加框）→ 将成为 x 的第 0 行
+hl('data', S[i+1:i+block_size+1]); show('data')
+y0 = data[i+1:i+block_size+1]           #: 同一个起点**往右挪一格**再剪 4 个 → y 的第 0 行
+dims('x', 'B T'); as_chars('x', voc); dims('y', 'B T'); as_chars('y', voc)
+x = torch.stack([data[i:i+block_size] for i in ix])       #: 每个起点剪一段，`torch.stack` 把 2 个 `(4,)` 摞成 `(2, 4)`
+y = torch.stack([data[i+1:i+block_size+1] for i in ix])   #: y 同理。上下对照：`y[b, t]` 正是原文里紧跟在 `x[b, t]` 后面的字符
+hl('x', S[0, :3]); hl('y', S[0, 2]); show('x', 'y')
+context, target = x[0, :3], y[0, 2]     #: 一行里藏着 T 道题，这是其中一道：看到 x 第 0 行前 3 个字符 → 该猜 `y[0, 2]`
+```
+
 <div class="predict">
 
 **先猜一猜**：`B=4, T=8` 时，一次 `get_batch` 一共提供了多少道「猜下一个字符」的练习题？起点 `ix` 最大可以取到多少（用 `len(data)` 和 `block_size` 表示）？

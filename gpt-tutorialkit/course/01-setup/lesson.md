@@ -25,6 +25,17 @@ gpt.py 开头十几行决定了整个实验的「尺寸」。后面每一课都�
 
 `torch.manual_seed(1337)` 固定随机数的起点。模型初始化、抽 batch、dropout、生成都要用随机数；种子固定，整次实验就能复现。判题器也靠它：用同一个种子跑你的代码和原版，结果应该一模一样。
 
+```tensors 图解：B、T、C 长什么样（缩小到 B=2, T=4, C=3）
+dims('x', 'B T')
+x = torch.randint(65, (2, 4))   #: 一批数据 `x` 的形状是 `(B, T)`：B 段文字，每段 T 个字符编号。B × T = 8 就是这一步要做的练习题数
+dims('emb', 'B T C')
+emb = torch.randn(2, 4, 3)      #: 进了模型以后，每个编号会变成一个 C 维向量，形状变成 `(B, T, C)`。三维张量按 B 拆成几块画，每块 T 行 C 列；后面所有课都这样画
+torch.manual_seed(1337)
+a = torch.randint(10, (2, 5))   #: 先 `torch.manual_seed(1337)`，再抽一次随机数
+torch.manual_seed(1337)
+b = torch.randint(10, (2, 5))   #: 再设一次**同一个**种子、同样抽一次：每一格都和 `a` 相同
+```
+
 <div class="predict">
 
 **先猜一猜**：原版每步训练要做的练习题数量，是本课的多少倍？

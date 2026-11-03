@@ -83,7 +83,9 @@ const first = lessons[0];
             <li><code>load_original('gpt')</code> 是本课的辅助函数：载入原版的定义和数据，不执行原版末尾的长训练。每次运行都是全新进程，上一课训练出的权重不会带到下一课。</li>
             <li>进度和草稿只存在这个浏览器的 localStorage 里。</li>
           </ul>
-          <a class="btn btn-primary" href={`/${first.slug}`}>开始第 1 课：{first.title} →</a>
+          <p>先读<a href="/matrices">矩阵与张量运算图解</a>：看懂 shape、矩阵乘法、广播和 softmax，再开始写模型。后面用到的函数也能从这一章的索引查到。</p>
+          <a class="btn btn-primary" href="/matrices">先看矩阵与张量运算 →</a>
+          <a class="btn btn-ghost" href={`/${first.slug}`}>开始第 1 课：{first.title} →</a>
         </section>
       </article>
     </main>

@@ -28,6 +28,21 @@ optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
 
 合计 **12C² + 10C**。参数量和头数无关，只看宽度 C 的平方。原版 C=384，单个 Block 就有 177 万参数。
 
+```tensors 图解：一个 Block 的参数都在哪（n_embd = C = 4，2 个头）
+C = 4
+qkv = [nn.Linear(C, C // 2, bias=False) for _ in range(6)]
+proj = nn.Linear(C, C)
+ffwd = nn.Sequential(nn.Linear(C, 4 * C), nn.ReLU(), nn.Linear(4 * C, C))
+ln1, ln2 = nn.LayerNorm(C), nn.LayerNorm(C)
+count = lambda *ms: sum(p.numel() for m in ms for p in m.parameters())
+labels('parts', cols=['q,k,v', 'proj', 'ffwd', 'ln×2'])
+parts = torch.tensor([count(*qkv), count(proj), count(ffwd), count(ln1, ln2)])   #: 四个部件各有多少参数：3C²=48、C²+C=20、8C²+5C=148、4C=16。前馈层占了一大半
+total = parts.sum().item()               #: 合计
+formula = 12 * C**2 + 10 * C             #: 用公式 12C² + 10C 算，结果一样
+dims('W1', '4C C')
+W1 = ffwd[0].weight                      #: 前馈第一层的权重 `(4C, C)`：它和第二层 `(C, 4C)` 就是 8C² 的来源
+```
+
 <div class="predict">
 
 **先猜一猜**：原版尺寸（C=384、6 层、block_size=256）的 GPT 有多少参数？

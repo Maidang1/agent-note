@@ -16,6 +16,26 @@ refs: bigram.py:73-81
 
 `F.cross_entropy` 把 softmax、取值、`-log`、平均一步做完，但它要求输入形状是 `(N, C)` 和 `(N,)`。所以原版先用 `.view` 把 `(B, T, C)` 摊平成 `(B*T, C)`。`.view` 只改变形状的「看法」，不复制、不改动数据。
 
+```tensors 图解：从 (B, T, C) 的打分到一个 loss（B=2, T=2, 4 个候选字符）
+voc = ['e', 'h', 'l', 'o']
+dims('logits', 'B T C'); labels('logits', cols=voc)
+logits = torch.randn(2, 2, 4)            #: 模型的打分：2 段 × 2 个位置 × 4 个候选
+dims('targets', 'B T'); as_chars('targets', voc)
+targets = torch.tensor([[0, 2], [2, 3]])   #: 每个位置的正确答案（下一个字符的编号）
+B, T, C = logits.shape                   #: 从形状里拆出三个维度
+dims('logits', 'B*T C')
+logits = logits.view(B*T, C)             #: `.view(B*T, C)`：把两段上下摞成 4 行。数字一个没变，只是换了「看法」
+dims('targets', 'B*T')
+targets = targets.view(B*T)              #: 答案也摊平成 4 个，和 logits 的 4 行一一对应
+dims('probs', 'B*T C'); labels('probs', cols=voc)
+probs = F.softmax(logits, dim=-1)        #: softmax：每行变成全正、加起来为 1 的概率
+hl('probs', S[torch.arange(B*T), targets]); show('probs')
+p_correct = probs[torch.arange(B*T), targets]   #: 第 i 行取第 `targets[i]` 列（加框）：正确答案分到的概率。第 2 行只给了正确答案 0.05
+nll = -torch.log(p_correct)              #: `-log(p)`：概率越小，罚得越重。0.05 那一行被罚了 3 分多，其他行都不到 1
+loss = nll.mean()                        #: 平均起来就是交叉熵 loss
+F.cross_entropy(logits, targets)         #: `F.cross_entropy` 一步做完上面三步，结果相同
+```
+
 <div class="predict">
 
 **先猜一猜**：模型还没训练、打分基本随机时，loss 大约是多少？

@@ -13,6 +13,20 @@ refs: gpt.py:84-85
 
 为什么是 `self.tril[:T, :T]`？`tril` 按 `block_size` 建好，但输入可能更短（比如生成的头几步只有 1、2 个字符），所以只取左上角 T × T。
 
+```tensors 图解：先遮住未来，再 softmax（T=4，只画一段）
+T = 4
+dims('wei', 'T T'); dims('tril', 'T T'); dims('mask', 'T T'); dims('wrong', 'T T')
+wei = torch.randn(T, T)                  #: 上一课算出的打分：每个位置对**所有**位置都有分，包括未来（右上角）
+scores = wei.clone()
+tril = torch.tril(torch.ones(T, T))      #: `self.tril[:T, :T]`：下三角全 1
+mask = tril == 0                         #: `tril == 0`：右上角为 T（True），就是要遮住的「未来」
+wei = wei.masked_fill(mask, float('-inf'))   #: 为 True 的位置换成 −∞（斜线格）
+wei = F.softmax(wei, dim=-1)             #: 每行 softmax：−∞ 变成 0，剩下的权重加起来是 1
+wei.sum(dim=-1)                          #: 每行的和：全是 1
+wrong = F.softmax(scores, dim=-1).masked_fill(mask, 0.0)   #: 反例：先 softmax 再把未来填 0
+wrong.sum(dim=-1)                        #: 每行的和不再是 1：softmax 时未来位置已经分走了一部分（只有最后一行没有未来，才刚好是 1）
+```
+
 <div class="predict">
 
 **先猜一猜**：如果把 masked_fill 写在 softmax **之后**（填 0 而不是 -inf），会出什么问题？

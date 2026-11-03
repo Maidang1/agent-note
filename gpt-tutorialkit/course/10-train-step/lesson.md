@@ -20,6 +20,25 @@ refs: bigram.py:101-102, bigram.py:114-118
 
 **AdamW** 是原版选的优化器：在「沿梯度走一小步」的基础上，给每个参数自适应地调步长。`lr`（学习率）控制步子大小，Bigram 用 `1e-2`。
 
+```tensors 图解：一步训练里，表的哪些格子被改了（4 × 4 的小 Bigram）
+voc = ['e', 'h', 'l', 'o']
+table = nn.Embedding(4, 4)
+optimizer = torch.optim.AdamW(table.parameters(), lr=1e-2)
+dims('xb', 'B T'); as_chars('xb', voc); dims('yb', 'B T'); as_chars('yb', voc)
+xb = torch.tensor([[1, 0, 2]])           #: 一批输入 `"hel"`
+yb = torch.tensor([[0, 2, 2]])           #: 答案 `"ell"`：右移一格
+dims('W_before', 'V C'); labels('W_before', rows=voc, cols=voc)
+W_before = table.weight.detach().clone() #: 训练前的表（先存一份，等会儿对比）
+loss = F.cross_entropy(table(xb).view(3, 4), yb.view(3))   #: 1) 前向，得到 loss
+optimizer.zero_grad(set_to_none=True)
+dims('table.weight.grad', 'V C'); labels('table.weight.grad', rows=voc, cols=voc); show('table.weight.grad')
+loss.backward()                          #: 2) 3) 清梯度、反向传播。梯度和表的形状一样；只有这批出现过的 `h`、`e`、`l` 三行有梯度，`o` 行全是 0
+optimizer.step()
+dims('change', 'V C'); labels('change', rows=voc, cols=voc)
+change = table.weight.detach() - W_before   #: 4) `optimizer.step()` 之后，新表 − 旧表：有梯度的三行被挪了一小步；`o` 行几乎不动（只有 AdamW 的权重衰减让它缩了一丁点）
+loss_after = F.cross_entropy(table(xb).view(3, 4), yb.view(3))   #: 同一批再算一次：loss 变小了
+```
+
 <div class="predict">
 
 **先猜一猜**：这批 x 里出现了约 20 种不同字符。backward 之后，65 × 65 的表里有多少**行**会拿到非零梯度？

@@ -21,6 +21,21 @@ refs: gpt.py:64-74
 
 `tril` 就是上一课的下三角矩阵。它不需要训练，但要随模型一起 `.to(device)`、一起存档，所以用 `register_buffer` 登记，而不是普通属性或参数。
 
+```tensors 图解：x 经过三个 Linear，变成 k、q、v（n_embd=4 → head_size=2；只画一段，T=3）
+n_embd, head_size, T = 4, 2, 3
+key = nn.Linear(n_embd, head_size, bias=False)
+query = nn.Linear(n_embd, head_size, bias=False)
+value = nn.Linear(n_embd, head_size, bias=False)
+dims('x', 'T C'); dims('Wk', 'hs C'); dims('k', 'T hs'); dims('q', 'T hs'); dims('v', 'T hs'); dims('tril', 'T T')
+x = torch.randn(T, n_embd)               #: 输入：3 个位置，每个位置一个 4 维向量
+Wk = key.weight                          #: key 的权重：形状是 `(输出, 输入) = (2, 4)`。query、value 各有一份同样形状、数值不同的
+k = key(x)                               #: `key(x)` 就是 `x @ Wkᵀ`：每个位置的 4 个数被压成 2 个
+hl('x', S[1]); hl('Wk', S[0]); hl('k', S[1, 0]); show('x', 'Wk', 'k')
+x[1] @ Wk[0]                             #: 看一个格子：`k[1, 0]` = x 第 1 行和 Wk 第 0 行逐个相乘再相加
+q, v = query(x), value(x)                #: query、value 同样算，但权重不同，所以 k、q、v 内容各不相同
+tril = torch.tril(torch.ones(T, T))      #: `tril` 这个 buffer：下三角全 1，第 t 行标出位置 t 能看见哪些位置
+```
+
 <div class="predict">
 
 **先猜一猜**：本课 `n_embd=32`、`head_size=8`，一个 Head 有多少个可训练参数？

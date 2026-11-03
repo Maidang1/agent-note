@@ -232,6 +232,78 @@ a.badge-outline:hover { background: var(--accent); }
 .predict { margin: 14px 0; padding: 4px 16px 8px; border: 1px dashed var(--todo-edge); border-radius: var(--radius); }
 .predict details { background: var(--muted); border: 0; }
 
+/* 「图解」：```tensors 块在构建时执行，逐步画出张量（scripts/tensorfig.py）
+   正数蓝、负数橙，颜色越深绝对值越大；高亮的格子加框，其余变淡。 */
+.tfig { --tfig-pos: #2563eb; --tfig-neg: #ea580c; margin: 18px 0; padding: 14px 16px 6px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--background); }
+.tfig-title { font-size: 13px; font-weight: 600; color: var(--muted-foreground); margin-bottom: 4px; }
+.tfig .tfig-steps { list-style: none; margin: 0; padding: 0; }
+.tfig .tfig-step { margin: 0; padding: 12px 0 14px; }
+.tfig-step + .tfig-step { border-top: 1px dashed var(--border); }
+.tfig-head { display: flex; align-items: baseline; gap: 10px; }
+.tfig-num {
+  flex: 0 0 20px; height: 20px; border-radius: 999px; align-self: flex-start; margin-top: 3px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: var(--primary); color: var(--primary-foreground); font-size: 11.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.tfig .tfig-cap { margin: 0; font-size: 14.5px; line-height: 1.65; }
+.tfig pre.tfig-code {
+  margin: 8px 0 0 30px; padding: 6px 10px; overflow-x: auto;
+  border: 1px solid var(--border); border-radius: 6px; background: var(--muted);
+  font-family: var(--font-mono); font-size: 12.5px; line-height: 1.6; white-space: pre;
+}
+.tfig pre.tfig-code code { background: none; padding: 0; font-size: inherit; }
+.tfig :not(pre) > code { font-family: var(--font-mono); font-size: .86em; padding: .1em .35em; border-radius: 4px; background: var(--muted); }
+.tfig-vals { display: flex; flex-wrap: wrap; gap: 14px 24px; margin: 10px 0 0 30px; }
+.tfig-val { min-width: 0; max-width: 100%; }
+.tfig-name { display: flex; align-items: baseline; gap: 8px; margin-bottom: 4px; font-size: 13px; }
+.tfig .tfig-name code, .tfig .tfig-scalar code { font-weight: 600; }
+.tfig-shape { font-family: var(--font-mono); font-size: 12px; color: var(--muted-foreground); }
+.tfig-panels { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px 16px; overflow-x: auto; }
+.tfig-panel-title { font-family: var(--font-mono); font-size: 11.5px; color: var(--muted-foreground); margin-bottom: 2px; }
+.tfig-more { align-self: center; color: var(--muted-foreground); }
+.tgrid { display: inline-grid; gap: 2px; font-family: var(--font-mono); font-size: 12px; line-height: 1; font-variant-numeric: tabular-nums; }
+.tgrid > span { display: flex; align-items: center; justify-content: center; min-width: 26px; height: 24px; padding: 0 4px; border-radius: 3px; white-space: pre; }
+.tgrid .tc { border: 1px solid var(--border); }
+.tgrid .tc-h { font-size: 10.5px; color: var(--todo-edge); }
+.tgrid .tc-rh { justify-content: flex-end; }
+.tgrid .tc-corner { font-size: 10px; color: var(--muted-foreground); justify-content: flex-start; }
+.tgrid .tc-gap { border-color: transparent; color: var(--muted-foreground); }
+.tgrid .tc-char { gap: 3px; }
+.tgrid .tc-char small { font-size: 11px; font-weight: 600; color: var(--muted-foreground); }
+.tgrid .tc-on { background: var(--primary); color: var(--primary-foreground); border-color: var(--primary); }
+.tgrid .tc-inf { color: var(--muted-foreground); background: repeating-linear-gradient(135deg, var(--muted) 0 4px, transparent 4px 8px); }
+.tgrid .tc-hl { outline: 2px solid var(--foreground); outline-offset: -1px; font-weight: 600; }
+.tgrid .tc-dim { opacity: .3; }
+.tfig-scalar code { font-size: 13px; }
+
+/* 右侧「答案执行图解」：整段代码按执行顺序排列，行号和编辑器一致；
+   --depth 是调用深度（进入函数就向右缩一层），✎ 标出学习者要写的行 */
+.trace { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
+.trace > summary { display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 13px; font-weight: 500; }
+.trace-toggle { height: 26px; padding: 0 10px; font-size: 12px; }
+.runner-trace-wide .runner-editor { flex-basis: 22%; }
+.tfig-trace { margin: 10px 0 0; padding: 8px 12px 4px; }
+.tfig-trace .tfig-step { padding: 8px 0 10px; margin-left: calc(var(--depth, 0) * 18px); }
+.tfig-trace .tfig-step[style] { padding-left: 10px; border-left: 2px solid var(--border); }
+.tfig-trace .tfig-step + .tfig-step { border-top: 1px dashed var(--border); }
+.tfig-trace .tfig-head { align-items: flex-start; }
+.tfig-trace .tfig-num {
+  flex: 0 0 auto; min-width: 28px; margin-top: 4px; padding: 0 5px; border-radius: 4px;
+  background: var(--muted); color: var(--muted-foreground);
+  font-family: var(--font-mono); font-weight: 500;
+}
+.tfig-trace .tfig-mine .tfig-num { background: var(--todo); color: var(--foreground); box-shadow: inset 2px 0 0 var(--todo-edge); }
+.tfig-trace .tfig-mine pre.tfig-code { background: var(--todo); box-shadow: inset 2px 0 0 var(--todo-edge); }
+.tfig-trace pre.tfig-code { flex: 1; min-width: 0; margin: 0; }
+.tfig-trace .tfig-cap { margin: 4px 0 0 38px; font-size: 12.5px; color: var(--muted-foreground); }
+.tfig-trace .tfig-vals { margin-left: 38px; }
+.tfig-out {
+  margin: 8px 0 0 38px; padding: 6px 10px; border-radius: 6px;
+  background: var(--primary); color: var(--primary-foreground);
+  font-family: var(--font-mono); font-size: 12px; line-height: 1.6;
+  white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16em; overflow-y: auto;
+}
+
 .milestone { margin-top: 36px; padding: 14px 16px; }
 .milestone-label { font-size: 12px; font-weight: 600; color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .04em; }
 .milestone p { margin: 4px 0 0; }

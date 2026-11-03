@@ -17,6 +17,14 @@ GPT 版本**最后一步也评估一次**，这样总能看到训练结束时的
 
 本课配置：`block_size=32`、`n_embd=64`、3 层、学习率 `1e-3`，约 16 万参数，1000 步。比原版小很多，但上下文从 8 扩到 32，模型能看到的上文足够跨过一个单词了。
 
+```tensors 图解：哪些步会评估（max_iters=12, eval_interval=5）
+max_iters, eval_interval = 12, 5
+dims('iters', 'iter'); dims('bigram_eval', 'iter'); dims('gpt_eval', 'iter')
+iters = torch.arange(max_iters)          #: 第 0 到 11 步
+bigram_eval = iters % eval_interval == 0 #: 第 12 课的条件：只在 0、5、10 步评估（T），最后一步 11 不评估
+gpt_eval = (iters % eval_interval == 0) | (iters == max_iters - 1)   #: GPT 版多了 `or iter == max_iters - 1`：最后一步也评估，总能看到最终成绩
+```
+
 <div class="predict">
 
 **先猜一猜**：第 12 课 Bigram 训了 3000 步，val loss 停在约 2.49。这个小 GPT 训 1000 步能到多少？
